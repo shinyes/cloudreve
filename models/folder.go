@@ -280,6 +280,3 @@ func (folder *Folder) ModTime() time.Time {
 func (folder *Folder) IsDir() bool {
 	return true
 }
-func (folder *Folder) GetPosition() string {
-	return folder.Position
-}

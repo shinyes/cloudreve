@@ -25,7 +25,6 @@ func initWebDAV(group *gin.RouterGroup) {
 		group.Handle("UNLOCK", ":uid/*path", controllers.ServeWebDAV)
 		group.Handle("PROPPATCH", ":uid/*path", controllers.ServeWebDAV)
 		group.Handle("COPY", ":uid/*path", controllers.ServeWebDAV)
-		group.Handle("MOVE", ":uid/*path", controllers.ServeWebDAV)
 
 	}
 }

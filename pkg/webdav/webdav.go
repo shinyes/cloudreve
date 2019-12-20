@@ -24,6 +24,8 @@ import (
 type Handler struct {
 	// Prefix is the URL path prefix to strip from WebDAV resource paths.
 	Prefix string
+	// FileSystem is the virtual file system.
+	FileSystem FileSystem
 	// LockSystem is the lock management system.
 	LockSystem map[uint]LockSystem
 	// Logger is an optional error logger. If non-nil, it will be called
@@ -56,7 +58,9 @@ func isPathExist(ctx context.Context, fs *filesystem.FileSystem, path string) (b
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request, fs *filesystem.FileSystem) {
 	status, err := http.StatusBadRequest, errUnsupportedMethod
-	if h.LockSystem == nil {
+	if h.FileSystem == nil {
+		status, err = http.StatusInternalServerError, errNoFileSystem
+	} else if h.LockSystem == nil {
 		status, err = http.StatusInternalServerError, errNoLockSystem
 	} else {
 		// 检查并新建LockSystem
@@ -201,7 +205,7 @@ func (h *Handler) handleOptions(w http.ResponseWriter, r *http.Request, fs *file
 	}
 	ctx := r.Context()
 	allow := "OPTIONS, LOCK, PUT, MKCOL"
-	if exist, fi := isPathExist(ctx, fs, reqPath); exist {
+	if fi, err := h.FileSystem.Stat(ctx, reqPath); err == nil {
 		if fi.IsDir() {
 			allow = "OPTIONS, LOCK, DELETE, PROPPATCH, COPY, MOVE, UNLOCK, PROPFIND"
 		} else {
@@ -371,7 +375,6 @@ func (h *Handler) handleMkcol(w http.ResponseWriter, r *http.Request, fs *filesy
 	return http.StatusCreated, nil
 }
 
-// OK
 func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request, fs *filesystem.FileSystem) (status int, err error) {
 	hdr := r.Header.Get("Destination")
 	if hdr == "" {
@@ -450,7 +453,7 @@ func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request, fs *fil
 			return http.StatusBadRequest, errInvalidDepth
 		}
 	}
-	return moveFiles(ctx, fs, target, dst, r.Header.Get("Overwrite") == "T")
+	return moveFiles(ctx, h.FileSystem, src, dst, r.Header.Get("Overwrite") == "T")
 }
 
 // OK

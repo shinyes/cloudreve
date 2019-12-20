@@ -13,6 +13,7 @@ var handler *webdav.Handler
 func init() {
 	handler = &webdav.Handler{
 		Prefix:     "/dav/",
+		FileSystem: webdav.AdapterFS(""),
 		LockSystem: make(map[uint]webdav.LockSystem),
 	}
 }

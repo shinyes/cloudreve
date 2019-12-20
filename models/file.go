@@ -183,11 +183,6 @@ func (file *File) GetSize() uint64 {
 func (file *File) ModTime() time.Time {
 	return file.UpdatedAt
 }
-
 func (file *File) IsDir() bool {
 	return false
-}
-
-func (file *File) GetPosition() string {
-	return file.Position
 }

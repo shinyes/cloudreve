@@ -60,10 +60,10 @@ func TestFileSystem_Upload(t *testing.T) {
 	asserts := assert.New(t)
 
 	// 正常
-	testHandler := new(FileHeaderMock)
-	testHandler.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(nil)
+	testHandller := new(FileHeaderMock)
+	testHandller.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(nil)
 	fs := &FileSystem{
-		Handler: testHandler,
+		Handler: testHandller,
 		User: &model.User{
 			Model: gorm.Model{
 				ID: 1,
@@ -88,10 +88,10 @@ func TestFileSystem_Upload(t *testing.T) {
 	asserts.NoError(err)
 
 	// 正常，上下文已指定源文件
-	testHandler = new(FileHeaderMock)
-	testHandler.On("Put", testMock.Anything, testMock.Anything, "123/123.txt").Return(nil)
+	testHandller = new(FileHeaderMock)
+	testHandller.On("Put", testMock.Anything, testMock.Anything, "123/123.txt").Return(nil)
 	fs = &FileSystem{
-		Handler: testHandler,
+		Handler: testHandller,
 		User: &model.User{
 			Model: gorm.Model{
 				ID: 1,
@@ -124,20 +124,20 @@ func TestFileSystem_Upload(t *testing.T) {
 	err = fs.Upload(ctx, file)
 	asserts.Error(err)
 	fs.Hooks["BeforeUpload"] = nil
-	testHandler.AssertExpectations(t)
+	testHandller.AssertExpectations(t)
 
 	// 上传文件失败
-	testHandler2 := new(FileHeaderMock)
-	testHandler2.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(errors.New("error"))
-	fs.Handler = testHandler2
+	testHandller2 := new(FileHeaderMock)
+	testHandller2.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(errors.New("error"))
+	fs.Handler = testHandller2
 	err = fs.Upload(ctx, file)
 	asserts.Error(err)
-	testHandler2.AssertExpectations(t)
+	testHandller2.AssertExpectations(t)
 
 	// AfterUpload失败
-	testHandler3 := new(FileHeaderMock)
-	testHandler3.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(nil)
-	fs.Handler = testHandler3
+	testHandller3 := new(FileHeaderMock)
+	testHandller3.On("Put", testMock.Anything, testMock.Anything, testMock.Anything).Return(nil)
+	fs.Handler = testHandller3
 	fs.Use("AfterUpload", func(ctx context.Context, fs *FileSystem) error {
 		return errors.New("error")
 	})
@@ -146,7 +146,7 @@ func TestFileSystem_Upload(t *testing.T) {
 	})
 	err = fs.Upload(ctx, file)
 	asserts.Error(err)
-	testHandler2.AssertExpectations(t)
+	testHandller2.AssertExpectations(t)
 
 }
 
@@ -180,11 +180,11 @@ func TestFileSystem_GetUploadToken(t *testing.T) {
 			"upload_credential_timeout": "10",
 			"upload_session_timeout":    "10",
 		}, "setting_")
-		testHandler := new(FileHeaderMock)
-		testHandler.On("Token", testMock.Anything, int64(10), testMock.Anything).Return(serializer.UploadCredential{Token: "test"}, nil)
-		fs.Handler = testHandler
+		testHandller := new(FileHeaderMock)
+		testHandller.On("Token", testMock.Anything, int64(10), testMock.Anything).Return(serializer.UploadCredential{Token: "test"}, nil)
+		fs.Handler = testHandller
 		res, err := fs.GetUploadToken(ctx, "/", 10, "123")
-		testHandler.AssertExpectations(t)
+		testHandller.AssertExpectations(t)
 		asserts.NoError(err)
 		asserts.Equal("test", res.Token)
 	}
@@ -195,11 +195,11 @@ func TestFileSystem_GetUploadToken(t *testing.T) {
 			"upload_credential_timeout": "10",
 			"upload_session_timeout":    "10",
 		}, "setting_")
-		testHandler := new(FileHeaderMock)
-		testHandler.On("Token", testMock.Anything, int64(10), testMock.Anything).Return(serializer.UploadCredential{}, errors.New("error"))
-		fs.Handler = testHandler
+		testHandller := new(FileHeaderMock)
+		testHandller.On("Token", testMock.Anything, int64(10), testMock.Anything).Return(serializer.UploadCredential{}, errors.New("error"))
+		fs.Handler = testHandller
 		_, err := fs.GetUploadToken(ctx, "/", 10, "123")
-		testHandler.AssertExpectations(t)
+		testHandller.AssertExpectations(t)
 		asserts.Error(err)
 	}
 }

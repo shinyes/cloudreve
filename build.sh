@@ -55,12 +55,7 @@ _build() {
     export CC=$gcc
     export CGO_ENABLED=1
 
-    if [ -n "$VERSION" ]; then
-        out="release/cloudreve_${VERSION}_${os}_${arch}"
-    else
-        out="release/cloudreve_${COMMIT_SHA}_${os}_${arch}"
-    fi
-
+    out="release/cloudreve_${VERSION}_${os}_${arch}"
     go build -a -o "${out}" -ldflags " -X 'github.com/HFO4/cloudreve/pkg/conf.BackendVersion=$VERSION' -X 'github.com/HFO4/cloudreve/pkg/conf.LastCommit=$COMMIT_SHA'"
 
     if [ "$os" = "windows" ]; then

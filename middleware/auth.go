@@ -22,14 +22,16 @@ import (
 )
 
 // SignRequired 验证请求签名
-func SignRequired(authInstance auth.Auth) gin.HandlerFunc {
+func SignRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var err error
 		switch c.Request.Method {
-		case "PUT", "POST", "PATCH":
-			err = auth.CheckRequest(authInstance, c.Request)
+		case "PUT", "POST":
+			err = auth.CheckRequest(auth.General, c.Request)
+			// TODO 生产环境去掉下一行
+			//err = nil
 		default:
-			err = auth.CheckURI(authInstance, c.Request.URL)
+			err = auth.CheckURI(auth.General, c.Request.URL)
 		}
 
 		if err != nil {

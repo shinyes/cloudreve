@@ -87,10 +87,11 @@ func TestAuthRequired(t *testing.T) {
 
 func TestSignRequired(t *testing.T) {
 	asserts := assert.New(t)
+	auth.General = auth.HMACAuth{SecretKey: []byte(util.RandStringRunes(256))}
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request, _ = http.NewRequest("GET", "/test", nil)
-	SignRequiredFunc := SignRequired(auth.HMACAuth{SecretKey: []byte(util.RandStringRunes(256))})
+	SignRequiredFunc := SignRequired()
 
 	// 鉴权失败
 	SignRequiredFunc(c)

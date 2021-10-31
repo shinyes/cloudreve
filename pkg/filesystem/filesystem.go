@@ -1,12 +1,8 @@
 package filesystem
 
 import (
+	"context"
 	"errors"
-	"fmt"
-	"github.com/cloudreve/Cloudreve/v3/pkg/cluster"
-	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver"
-	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver/shadow/masterinslave"
-	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver/shadow/slaveinmaster"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver/remote"
 	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver/s3"
 	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver/upyun"
+	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/response"
 	"github.com/cloudreve/Cloudreve/v3/pkg/request"
 	"github.com/cloudreve/Cloudreve/v3/pkg/serializer"
 	"github.com/gin-gonic/gin"
@@ -44,6 +41,36 @@ type FileHeader interface {
 	GetMIMEType() string
 	GetFileName() string
 	GetVirtualPath() string
+}
+
+// Handler 存储策略适配器
+type Handler interface {
+	// 上传文件, dst为文件存储路径，size 为文件大小。上下文关闭
+	// 时，应取消上传并清理临时文件
+	Put(ctx context.Context, file io.ReadCloser, dst string, size uint64) error
+
+	// 删除一个或多个给定路径的文件，返回删除失败的文件路径列表及错误
+	Delete(ctx context.Context, files []string) ([]string, error)
+
+	// 获取文件内容
+	Get(ctx context.Context, path string) (response.RSCloser, error)
+
+	// 获取缩略图，可直接在ContentResponse中返回文件数据流，也可指
+	// 定为重定向
+	Thumb(ctx context.Context, path string) (*response.ContentResponse, error)
+
+	// 获取外链/下载地址，
+	// url - 站点本身地址,
+	// isDownload - 是否直接下载
+	Source(ctx context.Context, path string, url url.URL, ttl int64, isDownload bool, speed int) (string, error)
+
+	// Token 获取有效期为ttl的上传凭证和签名，同时回调会话有效期为sessionTTL
+	Token(ctx context.Context, ttl int64, callbackKey string) (serializer.UploadCredential, error)
+
+	// List 递归列取远程端path路径下文件、目录，不包含path本身，
+	// 返回的对象路径以path作为起始根目录.
+	// recursive - 是否递归列出
+	List(ctx context.Context, path string, recursive bool) ([]response.Object, error)
 }
 
 // FileSystem 管理文件的文件系统
@@ -69,7 +96,7 @@ type FileSystem struct {
 	/*
 	   文件系统处理适配器
 	*/
-	Handler driver.Handler
+	Handler Handler
 
 	// 回收锁
 	recycleLock sync.Mutex
@@ -107,6 +134,7 @@ func NewFileSystem(user *model.User) (*FileSystem, error) {
 	// 分配存储策略适配器
 	err := fs.DispatchHandler()
 
+	// TODO 分配默认钩子
 	return fs, err
 }
 
@@ -131,6 +159,7 @@ func NewAnonymousFileSystem() (*FileSystem, error) {
 }
 
 // DispatchHandler 根据存储策略分配文件适配器
+// TODO 完善测试
 func (fs *FileSystem) DispatchHandler() error {
 	var policyType string
 	var currentPolicy *model.Policy
@@ -155,7 +184,7 @@ func (fs *FileSystem) DispatchHandler() error {
 	case "remote":
 		fs.Handler = remote.Driver{
 			Policy:       currentPolicy,
-			Client:       request.NewClient(),
+			Client:       request.HTTPClient{},
 			AuthInstance: auth.HMACAuth{[]byte(currentPolicy.SecretKey)},
 		}
 		return nil
@@ -167,7 +196,7 @@ func (fs *FileSystem) DispatchHandler() error {
 	case "oss":
 		fs.Handler = oss.Driver{
 			Policy:     currentPolicy,
-			HTTPClient: request.NewClient(),
+			HTTPClient: request.HTTPClient{},
 		}
 		return nil
 	case "upyun":
@@ -176,9 +205,13 @@ func (fs *FileSystem) DispatchHandler() error {
 		}
 		return nil
 	case "onedrive":
-		var odErr error
-		fs.Handler, odErr = onedrive.NewDriver(currentPolicy)
-		return odErr
+		client, err := onedrive.NewClient(currentPolicy)
+		fs.Handler = onedrive.Driver{
+			Policy:     currentPolicy,
+			Client:     client,
+			HTTPClient: request.HTTPClient{},
+		}
+		return err
 	case "cos":
 		u, _ := url.Parse(currentPolicy.Server)
 		b := &cossdk.BaseURL{BucketURL: u}
@@ -190,7 +223,7 @@ func (fs *FileSystem) DispatchHandler() error {
 					SecretKey: currentPolicy.SecretKey,
 				},
 			}),
-			HTTPClient: request.NewClient(),
+			HTTPClient: request.HTTPClient{},
 		}
 		return nil
 	case "s3":
@@ -237,30 +270,6 @@ func NewFileSystemFromCallback(c *gin.Context) (*FileSystem, error) {
 	err = fs.DispatchHandler()
 
 	return fs, err
-}
-
-// SwitchToSlaveHandler 将负责上传的 Handler 切换为从机节点
-func (fs *FileSystem) SwitchToSlaveHandler(node cluster.Node) {
-	fs.Handler = slaveinmaster.NewDriver(node, fs.Handler, &fs.User.Policy)
-}
-
-// SwitchToShadowHandler 将负责上传的 Handler 切换为从机节点转存使用的影子处理器
-func (fs *FileSystem) SwitchToShadowHandler(master cluster.Node, masterURL, masterID string) {
-	switch fs.Policy.Type {
-	case "remote":
-		fs.Policy.Type = "local"
-		fs.DispatchHandler()
-	case "local":
-		fs.Policy.Type = "remote"
-		fs.Policy.Server = masterURL
-		fs.Policy.AccessKey = fmt.Sprintf("%d", master.ID())
-		fs.Policy.SecretKey = master.DBModel().MasterKey
-		fs.DispatchHandler()
-	case "onedrive":
-		fs.Policy.MasterID = masterID
-	}
-
-	fs.Handler = masterinslave.NewDriver(master, fs.Handler, fs.Policy)
 }
 
 // SetTargetFile 设置当前处理的目标文件

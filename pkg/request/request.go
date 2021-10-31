@@ -1,25 +1,23 @@
 package request
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"path"
-	"strings"
-	"sync"
+	"time"
 
 	model "github.com/cloudreve/Cloudreve/v3/models"
 	"github.com/cloudreve/Cloudreve/v3/pkg/auth"
-	"github.com/cloudreve/Cloudreve/v3/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v3/pkg/serializer"
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 )
 
 // GeneralClient 通用 HTTP Client
-var GeneralClient Client = NewClient()
+var GeneralClient Client = HTTPClient{}
 
 // Response 请求的响应或错误信息
 type Response struct {
@@ -34,30 +32,90 @@ type Client interface {
 
 // HTTPClient 实现 Client 接口
 type HTTPClient struct {
-	mu      sync.Mutex
-	options *options
 }
 
-func NewClient(opts ...Option) Client {
-	client := &HTTPClient{
-		options: newDefaultOption(),
-	}
+// Option 发送请求的额外设置
+type Option interface {
+	apply(*options)
+}
 
-	for _, o := range opts {
-		o.apply(client.options)
-	}
+type options struct {
+	timeout       time.Duration
+	header        http.Header
+	sign          auth.Auth
+	signTTL       int64
+	ctx           context.Context
+	contentLength int64
+}
 
-	return client
+type optionFunc func(*options)
+
+func (f optionFunc) apply(o *options) {
+	f(o)
+}
+
+func newDefaultOption() *options {
+	return &options{
+		header:        http.Header{},
+		timeout:       time.Duration(30) * time.Second,
+		contentLength: -1,
+	}
+}
+
+// WithTimeout 设置请求超时
+func WithTimeout(t time.Duration) Option {
+	return optionFunc(func(o *options) {
+		o.timeout = t
+	})
+}
+
+// WithContext 设置请求上下文
+func WithContext(c context.Context) Option {
+	return optionFunc(func(o *options) {
+		o.ctx = c
+	})
+}
+
+// WithCredential 对请求进行签名
+func WithCredential(instance auth.Auth, ttl int64) Option {
+	return optionFunc(func(o *options) {
+		o.sign = instance
+		o.signTTL = ttl
+	})
+}
+
+// WithHeader 设置请求Header
+func WithHeader(header http.Header) Option {
+	return optionFunc(func(o *options) {
+		for k, v := range header {
+			o.header[k] = v
+		}
+	})
+}
+
+// WithoutHeader 设置清除请求Header
+func WithoutHeader(header []string) Option {
+	return optionFunc(func(o *options) {
+		for _, v := range header {
+			delete(o.header, v)
+		}
+
+	})
+}
+
+// WithContentLength 设置请求大小
+func WithContentLength(s int64) Option {
+	return optionFunc(func(o *options) {
+		o.contentLength = s
+	})
 }
 
 // Request 发送HTTP请求
 func (c HTTPClient) Request(method, target string, body io.Reader, opts ...Option) *Response {
 	// 应用额外设置
-	c.mu.Lock()
-	options := *c.options
-	c.mu.Unlock()
+	options := newDefaultOption()
 	for _, o := range opts {
-		o.apply(&options)
+		o.apply(options)
 	}
 
 	// 创建请求客户端
@@ -66,13 +124,6 @@ func (c HTTPClient) Request(method, target string, body io.Reader, opts ...Optio
 	// size为0时将body设为nil
 	if options.contentLength == 0 {
 		body = nil
-	}
-
-	// 确定请求URL
-	if options.endpoint != nil {
-		targetURL := *options.endpoint
-		targetURL.Path = path.Join(targetURL.Path, target)
-		target = targetURL.String()
 	}
 
 	// 创建请求
@@ -90,36 +141,14 @@ func (c HTTPClient) Request(method, target string, body io.Reader, opts ...Optio
 	}
 
 	// 添加请求相关设置
-	if options.header != nil {
-		for k, v := range options.header {
-			req.Header.Add(k, strings.Join(v, " "))
-		}
-	}
-
-	if options.masterMeta && conf.SystemConfig.Mode == "master" {
-		req.Header.Add("X-Site-Url", model.GetSiteURL().String())
-		req.Header.Add("X-Site-Id", model.GetSettingByName("siteID"))
-		req.Header.Add("X-Cloudreve-Version", conf.BackendVersion)
-	}
-
-	if options.slaveNodeID != "" && conf.SystemConfig.Mode == "slave" {
-		req.Header.Add("X-Node-Id", options.slaveNodeID)
-	}
-
+	req.Header = options.header
 	if options.contentLength != -1 {
 		req.ContentLength = options.contentLength
 	}
 
 	// 签名请求
 	if options.sign != nil {
-		switch method {
-		case "PUT", "POST", "PATCH":
-			auth.SignRequest(options.sign, req, options.signTTL)
-		default:
-			if resURL, err := auth.SignURI(options.sign, req.URL.String(), options.signTTL); err == nil {
-				req.URL = resURL
-			}
-		}
+		auth.SignRequest(options.sign, req, options.signTTL)
 	}
 
 	// 发送请求

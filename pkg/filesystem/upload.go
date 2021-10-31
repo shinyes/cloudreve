@@ -228,14 +228,12 @@ func (fs *FileSystem) UploadFromStream(ctx context.Context, src io.ReadCloser, d
 }
 
 // UploadFromPath 将本机已有文件上传到用户的文件系统
-func (fs *FileSystem) UploadFromPath(ctx context.Context, src, dst string, resetPolicy bool) error {
+func (fs *FileSystem) UploadFromPath(ctx context.Context, src, dst string) error {
 	// 重设存储策略
-	if resetPolicy {
-		fs.Policy = &fs.User.Policy
-		err := fs.DispatchHandler()
-		if err != nil {
-			return err
-		}
+	fs.Policy = &fs.User.Policy
+	err := fs.DispatchHandler()
+	if err != nil {
+		return err
 	}
 
 	file, err := os.Open(util.RelativePath(src))

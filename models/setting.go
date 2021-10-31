@@ -30,16 +30,12 @@ func GetSettingByName(name string) string {
 	if optionValue, ok := cache.Get(cacheKey); ok {
 		return optionValue.(string)
 	}
-
 	// 尝试数据库中查找
-	if DB != nil {
-		result := DB.Where("name = ?", name).First(&setting)
-		if result.Error == nil {
-			_ = cache.Set(cacheKey, setting.Value, -1)
-			return setting.Value
-		}
+	result := DB.Where("name = ?", name).First(&setting)
+	if result.Error == nil {
+		_ = cache.Set(cacheKey, setting.Value, -1)
+		return setting.Value
 	}
-
 	return ""
 }
 

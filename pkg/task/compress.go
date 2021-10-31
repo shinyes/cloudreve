@@ -106,7 +106,7 @@ func (job *CompressTask) Do() {
 	job.TaskModel.SetProgress(TransferringProgress)
 
 	// 上传文件
-	err = fs.UploadFromPath(ctx, zipFile, job.TaskProps.Dst, true)
+	err = fs.UploadFromPath(ctx, zipFile, job.TaskProps.Dst)
 	if err != nil {
 		job.SetErrorMsg(err.Error())
 		return

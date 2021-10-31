@@ -6,7 +6,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	model "github.com/cloudreve/Cloudreve/v3/models"
-	"github.com/cloudreve/Cloudreve/v3/pkg/aria2/monitor"
 	"github.com/cloudreve/Cloudreve/v3/pkg/cache"
 	"github.com/jinzhu/gorm"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +37,7 @@ func TestDummyAria2(t *testing.T) {
 }
 
 func TestInit(t *testing.T) {
-	monitor.MAX_RETRY = 0
+	MAX_RETRY = 0
 	asserts := assert.New(t)
 	cache.Set("setting_aria2_token", "1", 0)
 	cache.Set("setting_aria2_call_timeout", "5", 0)
@@ -82,11 +81,11 @@ func TestInit(t *testing.T) {
 
 func TestGetStatus(t *testing.T) {
 	asserts := assert.New(t)
-	asserts.Equal(4, GetStatus("complete"))
-	asserts.Equal(1, GetStatus("active"))
-	asserts.Equal(0, GetStatus("waiting"))
-	asserts.Equal(2, GetStatus("paused"))
-	asserts.Equal(3, GetStatus("error"))
-	asserts.Equal(5, GetStatus("removed"))
-	asserts.Equal(6, GetStatus("?"))
+	asserts.Equal(4, getStatus("complete"))
+	asserts.Equal(1, getStatus("active"))
+	asserts.Equal(0, getStatus("waiting"))
+	asserts.Equal(2, getStatus("paused"))
+	asserts.Equal(3, getStatus("error"))
+	asserts.Equal(5, getStatus("removed"))
+	asserts.Equal(6, getStatus("?"))
 }

@@ -55,7 +55,7 @@ func NewClient(policy *model.Policy) (*Client, error) {
 		ClientID:     policy.BucketName,
 		ClientSecret: policy.SecretKey,
 		Redirect:     policy.OptionsSerialized.OdRedirect,
-		Request:      request.NewClient(),
+		Request:      request.HTTPClient{},
 	}
 
 	if client.Endpoints.DriverResource == "" {

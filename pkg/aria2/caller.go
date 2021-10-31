@@ -9,7 +9,6 @@ import (
 
 	model "github.com/cloudreve/Cloudreve/v3/models"
 	"github.com/cloudreve/Cloudreve/v3/pkg/aria2/rpc"
-	"github.com/cloudreve/Cloudreve/v3/pkg/mq"
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 )
 
@@ -34,7 +33,7 @@ func (client *RPCService) Init(server, secret string, timeout int, options map[s
 		Options: options,
 	}
 	caller, err := rpc.New(context.Background(), server, secret, time.Duration(timeout)*time.Second,
-		mq.GlobalMQ)
+		EventNotifier)
 	client.Caller = caller
 	return err
 }
@@ -86,7 +85,7 @@ func (client *RPCService) Select(task *model.Download, files []int) error {
 }
 
 // CreateTask 创建新任务
-func (client *RPCService) CreateTask(task *model.Download, groupOptions map[string]interface{}) (string, error) {
+func (client *RPCService) CreateTask(task *model.Download, groupOptions map[string]interface{}) error {
 	// 生成存储路径
 	path := filepath.Join(
 		model.GetSettingByName("aria2_temp_path"),
@@ -107,8 +106,18 @@ func (client *RPCService) CreateTask(task *model.Download, groupOptions map[stri
 
 	gid, err := client.Caller.AddURI(task.Source, options)
 	if err != nil || gid == "" {
-		return "", err
+		return err
 	}
 
-	return gid, nil
+	// 保存到数据库
+	task.GID = gid
+	_, err = task.Create()
+	if err != nil {
+		return err
+	}
+
+	// 创建任务监控
+	NewMonitor(task)
+
+	return nil
 }

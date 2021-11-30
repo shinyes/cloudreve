@@ -46,17 +46,13 @@ ARG TZ="Asia/Shanghai"
 ENV TZ ${TZ}
 
 COPY --from=be-builder /go/bin/Cloudreve /cloudreve/cloudreve
-COPY docker-bootstrap.sh /cloudreve/bootstrap.sh
 
 RUN apk upgrade \
-    && apk add bash tzdata aria2 \
+    && apk add bash tzdata \
     && ln -s /cloudreve/cloudreve /usr/bin/cloudreve \
     && ln -sf /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo ${TZ} > /etc/timezone \
-    && rm -rf /var/cache/apk/* \
-    && mkdir /etc/cloudreve \
-    && ln -s /etc/cloudreve/cloureve.db /cloudreve/cloudreve.db \
-    && ln -s /etc/cloudreve/conf.ini /cloudreve/conf.ini
+    && rm -rf /var/cache/apk/*
 
 # cloudreve use tcp 5212 port by default
 EXPOSE 5212/tcp
@@ -69,4 +65,4 @@ VOLUME /etc/cloudreve
 
 VOLUME /data
 
-ENTRYPOINT ["sh", "/cloudreve/bootstrap.sh"]
+ENTRYPOINT ["cloudreve"]

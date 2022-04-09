@@ -221,16 +221,13 @@ func DeleteFiles(files []*File, uid uint) error {
 	for _, file := range files {
 		if file.UserID != uid {
 			tx.Rollback()
-			return errors.New("user id not consistent")
+			return errors.New("User id not consistent")
 		}
 
-		result := tx.Unscoped().Where("size = ?", file.Size).Delete(file)
-		if result.RowsAffected == 0 {
-			tx.Rollback()
-			return errors.New("file size is dirty")
+		result := tx.Unscoped().Delete(file)
+		if result.RowsAffected != 0 {
+			size += file.Size
 		}
-
-		size += file.Size
 
 		if result.Error != nil {
 			tx.Rollback()

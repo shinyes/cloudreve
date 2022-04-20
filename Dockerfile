@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine as cloudreve_builder
+FROM golang:1.17.7-alpine as cloudreve_builder
 
 
 # install dependencies and build tools
@@ -10,11 +10,13 @@ RUN git clone --recurse-submodules https://github.com/cloudreve/Cloudreve.git
 # build frontend
 WORKDIR /cloudreve_builder/Cloudreve/assets
 RUN yarn install --network-timeout 1000000
-RUN yarn run build && rm -rf build/*.map
+RUN yarn run build
 
 # build backend
 WORKDIR /cloudreve_builder/Cloudreve
-RUN tag_name=$(git describe --tags) \
+RUN go get github.com/rakyll/statik \
+    && statik -src=assets/build/ -include=*.html,*.js,*.json,*.css,*.png,*.svg,*.ico -f \
+    && tag_name=$(git describe --tags) \
     && export COMMIT_SHA=$(git rev-parse --short HEAD) \
     && go build -a -o cloudreve -ldflags " -X 'github.com/HFO4/cloudreve/pkg/conf.BackendVersion=$tag_name' -X 'github.com/HFO4/cloudreve/pkg/conf.LastCommit=$COMMIT_SHA'"
 

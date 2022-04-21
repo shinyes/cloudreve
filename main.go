@@ -1,18 +1,13 @@
 package main
 
 import (
-	_ "embed"
+	"embed"
 	"flag"
-	"io"
-	"io/fs"
-	"strings"
 
 	"github.com/cloudreve/Cloudreve/v3/bootstrap"
 	"github.com/cloudreve/Cloudreve/v3/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 	"github.com/cloudreve/Cloudreve/v3/routers"
-
-	"github.com/mholt/archiver/v4"
 )
 
 var (
@@ -21,28 +16,21 @@ var (
 	scriptName string
 )
 
-//go:embed assets.zip
-var staticZip string
-
-var staticFS fs.FS
+//go:embed assets/build
+var staticEmbed embed.FS
 
 func init() {
 	flag.StringVar(&confPath, "c", util.RelativePath("conf.ini"), "配置文件路径")
 	flag.BoolVar(&isEject, "eject", false, "导出内置静态资源")
 	flag.StringVar(&scriptName, "database-script", "", "运行内置数据库助手脚本")
 	flag.Parse()
-
-	staticFS = archiver.ArchiveFS{
-		Stream: io.NewSectionReader(strings.NewReader(staticZip), 0, int64(len(staticZip))),
-		Format: archiver.Zip{},
-	}
-	bootstrap.Init(confPath, staticFS)
+	bootstrap.Init(confPath, staticEmbed)
 }
 
 func main() {
 	if isEject {
 		// 开始导出内置静态资源文件
-		bootstrap.Eject(staticFS)
+		bootstrap.Eject(staticEmbed)
 		return
 	}
 

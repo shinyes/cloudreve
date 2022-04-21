@@ -376,15 +376,10 @@ func (fs *FileSystem) listObjects(ctx context.Context, parent string, files []mo
 	return objects
 }
 
-// CreateDirectory 根据给定的完整创建目录，支持递归创建。如果目录已存在，则直接
-// 返回已存在的目录。
+// CreateDirectory 根据给定的完整创建目录，支持递归创建
 func (fs *FileSystem) CreateDirectory(ctx context.Context, fullPath string) (*model.Folder, error) {
-	if fullPath == "." || fullPath == "" {
+	if fullPath == "/" || fullPath == "." || fullPath == "" {
 		return nil, ErrRootProtected
-	}
-
-	if fullPath == "/" {
-		return fs.User.Root()
 	}
 
 	// 获取要创建目录的父路径和目录名
@@ -403,6 +398,10 @@ func (fs *FileSystem) CreateDirectory(ctx context.Context, fullPath string) (*mo
 	// 父目录是否存在
 	isExist, parent := fs.IsPathExist(base)
 	if !isExist {
+		// 递归创建父目录
+		if _, ok := ctx.Value(fsctx.IgnoreDirectoryConflictCtx).(bool); !ok {
+			ctx = context.WithValue(ctx, fsctx.IgnoreDirectoryConflictCtx, true)
+		}
 		newParent, err := fs.CreateDirectory(ctx, base)
 		if err != nil {
 			return nil, err
@@ -425,7 +424,7 @@ func (fs *FileSystem) CreateDirectory(ctx context.Context, fullPath string) (*mo
 
 	if err != nil {
 		if _, ok := ctx.Value(fsctx.IgnoreDirectoryConflictCtx).(bool); !ok {
-			return nil, fmt.Errorf("failed to create folder: %w", err)
+			return nil, ErrFolderExisted
 		}
 
 	}

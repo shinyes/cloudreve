@@ -2,9 +2,11 @@ package filesystem
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,7 +18,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/fsctx"
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 	"github.com/gin-gonic/gin"
-	"github.com/mholt/archiver/v4"
+	"golang.org/x/text/encoding/simplifiedchinese"
+	"golang.org/x/text/transform"
 )
 
 /* ===============
@@ -203,41 +206,21 @@ func (fs *FileSystem) Decompress(ctx context.Context, src, dst string) error {
 	}
 	defer zipFile.Close()
 
-	// 下载前先判断是否是可解压的格式
-	format, readStream, err := archiver.Identify(fs.FileTarget[0].SourceName, fileStream)
+	_, err = io.Copy(zipFile, fileStream)
 	if err != nil {
-		util.Log().Warning("无法识别文件格式 %s , %s", fs.FileTarget[0].SourceName, err)
+		util.Log().Warning("无法写入临时压缩文件 %s , %s", tempZipFilePath, err)
 		return err
 	}
 
-	extractor, ok := format.(archiver.Extractor)
-	if !ok {
-		return fmt.Errorf("file not an extractor %s", fs.FileTarget[0].SourceName)
+	zipFile.Close()
+	fileStream.Close()
+
+	// 解压缩文件
+	r, err := zip.OpenReader(tempZipFilePath)
+	if err != nil {
+		return err
 	}
-
-	// 只有zip格式可以多个文件同时上传
-	var isZip bool
-	switch extractor.(type) {
-	case archiver.Zip:
-		extractor = archiver.Zip{TextEncoding: "gb18030"}
-		isZip = true
-	}
-
-	// 除了zip必须下载到本地，其余的可以边下载边解压
-	reader := readStream
-	if isZip {
-		_, err = io.Copy(zipFile, readStream)
-		if err != nil {
-			util.Log().Warning("无法写入临时压缩文件 %s , %s", tempZipFilePath, err)
-			return err
-		}
-
-		fileStream.Close()
-
-		// 设置文件偏移量
-		zipFile.Seek(0, io.SeekStart)
-		reader = zipFile
-	}
+	defer r.Close()
 
 	// 重设存储策略
 	fs.Policy = &fs.User.Policy
@@ -253,64 +236,64 @@ func (fs *FileSystem) Decompress(ctx context.Context, src, dst string) error {
 		worker <- i
 	}
 
-	// 上传文件函数
-	uploadFunc := func(fileStream io.ReadCloser, size int64, savePath, rawPath string) {
-		defer func() {
-			if isZip {
-				worker <- 1
-				wg.Done()
-			}
-			if err := recover(); err != nil {
-				util.Log().Warning("上传压缩包内文件时出错")
-				fmt.Println(err)
-			}
-		}()
-
-		err := fs.UploadFromStream(ctx, &fsctx.FileStream{
-			File:        fileStream,
-			Size:        uint64(size),
-			Name:        path.Base(savePath),
-			VirtualPath: path.Dir(savePath),
-		}, true)
-		fileStream.Close()
-		if err != nil {
-			util.Log().Debug("无法上传压缩包内的文件%s , %s , 跳过", rawPath, err)
+	for _, f := range r.File {
+		fileName := f.Name
+		// 处理非UTF-8编码
+		if f.NonUTF8 {
+			i := bytes.NewReader([]byte(fileName))
+			decoder := transform.NewReader(i, simplifiedchinese.GB18030.NewDecoder())
+			content, _ := ioutil.ReadAll(decoder)
+			fileName = string(content)
 		}
-	}
 
-	// 解压缩文件，回调函数如果出错会停止解压的下一步进行，全部return nil
-	err = extractor.Extract(ctx, reader, nil, func(ctx context.Context, f archiver.File) error {
-		rawPath := util.FormSlash(f.NameInArchive)
+		rawPath := util.FormSlash(fileName)
 		savePath := path.Join(dst, rawPath)
 		// 路径是否合法
 		if !strings.HasPrefix(savePath, util.FillSlash(path.Clean(dst))) {
-			util.Log().Warning("%s: illegal file path", f.NameInArchive)
-			return nil
+			return fmt.Errorf("%s: illegal file path", f.Name)
 		}
 
 		// 如果是目录
-		if f.FileInfo.IsDir() {
+		if f.FileInfo().IsDir() {
 			fs.CreateDirectory(ctx, savePath)
-			return nil
+			continue
 		}
 
 		// 上传文件
 		fileStream, err := f.Open()
 		if err != nil {
 			util.Log().Warning("无法打开压缩包内文件%s , %s , 跳过", rawPath, err)
-			return nil
+			continue
 		}
 
-		if !isZip {
-			uploadFunc(fileStream, f.FileInfo.Size(), savePath, rawPath)
-		} else {
-			<-worker
+		select {
+		case <-worker:
 			wg.Add(1)
-			go uploadFunc(fileStream, f.FileInfo.Size(), savePath, rawPath)
+			go func(fileStream io.ReadCloser, size int64) {
+				defer func() {
+					worker <- 1
+					wg.Done()
+					if err := recover(); err != nil {
+						util.Log().Warning("上传压缩包内文件时出错")
+						fmt.Println(err)
+					}
+				}()
+
+				err = fs.UploadFromStream(ctx, &fsctx.FileStream{
+					File:        fileStream,
+					Size:        uint64(size),
+					Name:        path.Base(savePath),
+					VirtualPath: path.Dir(savePath),
+				}, true)
+				fileStream.Close()
+				if err != nil {
+					util.Log().Debug("无法上传压缩包内的文件%s , %s , 跳过", rawPath, err)
+				}
+			}(fileStream, f.FileInfo().Size())
 		}
-		return nil
-	})
+
+	}
 	wg.Wait()
-	return err
+	return nil
 
 }

@@ -62,10 +62,6 @@ func FrontendFileHandler() gin.HandlerFunc {
 			return
 		}
 
-		if path == "/service-worker.js" {
-			c.Header("Cache-Control", "public, no-cache")
-		}
-
 		// 存在的静态文件
 		fileServer.ServeHTTP(c.Writer, c.Request)
 		c.Abort()

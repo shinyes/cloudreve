@@ -113,15 +113,10 @@ func TestGenericAfterUpload(t *testing.T) {
 	mock.ExpectQuery("SELECT(.+)").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(1, 1))
-	mock.ExpectQuery("SELECT(.+)files").
-		WithArgs(1, "我的文件").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}))
 	// 1
-	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT(.+)").
-		WithArgs("我的文件", 1, 1).
+		WithArgs(1, 1, "我的文件").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(2, 1))
-	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT(.+)files(.+)").WillReturnError(errors.New("not found"))
 	mock.ExpectBegin()
 	mock.ExpectExec("INSERT(.+)files(.+)").WillReturnResult(sqlmock.NewResult(1, 1))
@@ -132,19 +127,22 @@ func TestGenericAfterUpload(t *testing.T) {
 	asserts.NoError(err)
 	asserts.NoError(mock.ExpectationsWereMet())
 
+	// 路径不存在
+	mock.ExpectQuery("SELECT(.+)folders(.+)").WillReturnRows(
+		mock.NewRows([]string{"name"}),
+	)
+	err = GenericAfterUpload(ctx, &fs, file)
+	asserts.Equal(ErrRootProtected, err)
+	asserts.NoError(mock.ExpectationsWereMet())
+
 	// 文件已存在
 	mock.ExpectQuery("SELECT(.+)").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(1, 1))
-	mock.ExpectQuery("SELECT(.+)files").
-		WithArgs(1, "我的文件").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}))
 	// 1
-	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT(.+)").
-		WithArgs("我的文件", 1, 1).
+		WithArgs(1, 1, "我的文件").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(2, 1))
-	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT(.+)files(.+)").WillReturnRows(
 		mock.NewRows([]string{"name"}).AddRow("test.txt"),
 	)
@@ -156,15 +154,10 @@ func TestGenericAfterUpload(t *testing.T) {
 	mock.ExpectQuery("SELECT(.+)").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(1, 1))
-	mock.ExpectQuery("SELECT(.+)files").
-		WithArgs(1, "我的文件").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}))
 	// 1
-	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT(.+)").
-		WithArgs("我的文件", 1, 1).
+		WithArgs(1, 1, "我的文件").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(2, 1))
-	mock.ExpectCommit()
 	mock.ExpectQuery("SELECT(.+)files(.+)").WillReturnRows(
 		mock.NewRows([]string{"name", "upload_session_id"}).AddRow("test.txt", "1"),
 	)
@@ -176,15 +169,10 @@ func TestGenericAfterUpload(t *testing.T) {
 	mock.ExpectQuery("SELECT(.+)").
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(1, 1))
-	mock.ExpectQuery("SELECT(.+)files").
-		WithArgs(1, "我的文件").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}))
 	// 1
-	mock.ExpectBegin()
 	mock.ExpectQuery("SELECT(.+)").
-		WithArgs("我的文件", 1, 1).
+		WithArgs(1, 1, "我的文件").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "owner_id"}).AddRow(2, 1))
-	mock.ExpectCommit()
 
 	mock.ExpectQuery("SELECT(.+)files(.+)").WillReturnError(errors.New("not found"))
 	mock.ExpectBegin()

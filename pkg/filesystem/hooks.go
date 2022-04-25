@@ -203,10 +203,14 @@ func SlaveAfterUpload(session *serializer.UploadSession) Hook {
 func GenericAfterUpload(ctx context.Context, fs *FileSystem, fileHeader fsctx.FileHeader) error {
 	fileInfo := fileHeader.Info()
 
-	// 创建或查找根目录
-	folder, err := fs.CreateDirectory(ctx, fileInfo.VirtualPath)
-	if err != nil {
-		return err
+	// 检查路径是否存在，不存在就创建
+	isExist, folder := fs.IsPathExist(fileInfo.VirtualPath)
+	if !isExist {
+		newFolder, err := fs.CreateDirectory(ctx, fileInfo.VirtualPath)
+		if err != nil {
+			return err
+		}
+		folder = newFolder
 	}
 
 	// 检查文件是否存在

@@ -167,14 +167,13 @@ func CreateTransferTask(c *gin.Context, req *serializer.SlaveTransferReq) serial
 
 // SlaveListService 从机上传会话服务
 type SlaveCreateUploadSessionService struct {
-	Session   serializer.UploadSession `json:"session" binding:"required"`
-	TTL       int64                    `json:"ttl"`
-	Overwrite bool                     `json:"overwrite"`
+	Session serializer.UploadSession `json:"session" binding:"required"`
+	TTL     int64                    `json:"ttl"`
 }
 
 // Create 从机创建上传会话
 func (service *SlaveCreateUploadSessionService) Create(ctx context.Context, c *gin.Context) serializer.Response {
-	if !service.Overwrite && util.Exists(service.Session.SavePath) {
+	if util.Exists(service.Session.SavePath) {
 		return serializer.Err(serializer.CodeConflict, "placeholder file already exist", nil)
 	}
 

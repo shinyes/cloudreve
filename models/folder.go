@@ -23,15 +23,11 @@ type Folder struct {
 
 // Create 创建目录
 func (folder *Folder) Create() (uint, error) {
-	tx := DB.Begin()
-	if err := tx.FirstOrCreate(folder, *folder).Error; err != nil {
-		tx.Rollback()
+	if err := DB.Create(folder).Error; err != nil {
 		util.Log().Warning("无法插入目录记录, %s", err)
 		return 0, err
 	}
-
-	err := tx.Commit().Error
-	return folder.ID, err
+	return folder.ID, nil
 }
 
 // GetChild 返回folder下名为name的子目录，不存在则返回错误

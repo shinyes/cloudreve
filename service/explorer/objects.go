@@ -127,9 +127,19 @@ func (service *ItemDecompressService) CreateDecompressTask(c *gin.Context) seria
 		return serializer.Err(serializer.CodeParamErr, "文件太大", nil)
 	}
 
-	// 必须是zip压缩包
-	if !strings.HasSuffix(file.Name, ".zip") {
-		return serializer.Err(serializer.CodeParamErr, "只能解压 ZIP 格式的压缩文件", nil)
+	// 支持的压缩格式后缀
+	var (
+		suffixes = []string{".zip", ".gz", ".xz", ".tar", ".rar"}
+		matched  bool
+	)
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(file.Name, suffix) {
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return serializer.Err(serializer.CodeParamErr, "不支持该格式的压缩文件", nil)
 	}
 
 	// 创建任务
@@ -391,6 +401,11 @@ func (service *ItemPropertyService) GetProperty(ctx context.Context, c *gin.Cont
 			return serializer.Err(serializer.CodeNotFound, "对象不存在", err)
 		}
 
+		// 如果对象是目录, 先尝试返回缓存结果
+		if cacheRes, ok := cache.Get(fmt.Sprintf("folder_props_%d", res)); ok {
+			return serializer.Response{Data: cacheRes.(serializer.ObjectProps)}
+		}
+
 		folder, err := model.GetFoldersByIDs([]uint{res}, user.ID)
 		if err != nil {
 			return serializer.DBErr("找不到目录", err)
@@ -398,14 +413,6 @@ func (service *ItemPropertyService) GetProperty(ctx context.Context, c *gin.Cont
 
 		props.CreatedAt = folder[0].CreatedAt
 		props.UpdatedAt = folder[0].UpdatedAt
-
-		// 如果对象是目录, 先尝试返回缓存结果
-		if cacheRes, ok := cache.Get(fmt.Sprintf("folder_props_%d", res)); ok {
-			res := cacheRes.(serializer.ObjectProps)
-			res.CreatedAt = props.CreatedAt
-			res.UpdatedAt = props.UpdatedAt
-			return serializer.Response{Data: res}
-		}
 
 		// 统计子目录
 		childFolders, err := model.GetRecursiveChildFolder([]uint{folder[0].ID},

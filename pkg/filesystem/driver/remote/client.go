@@ -30,7 +30,7 @@ const (
 // Client to operate uploading to remote slave server
 type Client interface {
 	// CreateUploadSession creates remote upload session
-	CreateUploadSession(ctx context.Context, session *serializer.UploadSession, ttl int64, overwrite bool) error
+	CreateUploadSession(ctx context.Context, session *serializer.UploadSession, ttl int64) error
 	// GetUploadURL signs an url for uploading file
 	GetUploadURL(ttl int64, sessionID string) (string, string, error)
 	// Upload uploads file to remote server
@@ -82,10 +82,11 @@ func (c *remoteClient) Upload(ctx context.Context, file fsctx.FileHeader) error 
 	}
 
 	// Create upload session
-	overwrite := fileInfo.Mode&fsctx.Overwrite == fsctx.Overwrite
-	if err := c.CreateUploadSession(ctx, session, int64(ttl), overwrite); err != nil {
+	if err := c.CreateUploadSession(ctx, session, int64(ttl)); err != nil {
 		return fmt.Errorf("failed to create upload session: %w", err)
 	}
+
+	overwrite := fileInfo.Mode&fsctx.Overwrite == fsctx.Overwrite
 
 	// Initial chunk groups
 	chunks := chunk.NewChunkGroup(file, c.policy.OptionsSerialized.ChunkSize, &backoff.ConstantBackoff{
@@ -129,11 +130,10 @@ func (c *remoteClient) DeleteUploadSession(ctx context.Context, sessionID string
 	return nil
 }
 
-func (c *remoteClient) CreateUploadSession(ctx context.Context, session *serializer.UploadSession, ttl int64, overwrite bool) error {
+func (c *remoteClient) CreateUploadSession(ctx context.Context, session *serializer.UploadSession, ttl int64) error {
 	reqBodyEncoded, err := json.Marshal(map[string]interface{}{
-		"session":   session,
-		"ttl":       ttl,
-		"overwrite": overwrite,
+		"session": session,
+		"ttl":     ttl,
 	})
 	if err != nil {
 		return err

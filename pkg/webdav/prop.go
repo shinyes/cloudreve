@@ -10,9 +10,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"mime"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -383,7 +381,7 @@ func findContentType(ctx context.Context, fs *filesystem.FileSystem, ls LockSyst
 	//// Rewind file.
 	//_, err = f.Seek(0, os.SEEK_SET)
 	//return ctype, err
-	return mime.TypeByExtension(filepath.Ext(name)), nil
+	return "", nil
 }
 
 // ETager is an optional interface for the os.FileInfo objects

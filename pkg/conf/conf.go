@@ -3,7 +3,7 @@ package conf
 import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 	"github.com/go-ini/ini"
-	"github.com/go-playground/validator/v10"
+	"gopkg.in/go-playground/validator.v9"
 )
 
 // database 数据库
@@ -26,7 +26,6 @@ type system struct {
 	Debug         bool
 	SessionSecret string
 	HashIDSalt    string
-	GracePeriod   int `validate:"gte=0"`
 }
 
 type ssl struct {

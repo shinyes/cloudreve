@@ -1,11 +1,9 @@
 package common
 
 import (
-	"testing"
-
 	model "github.com/cloudreve/Cloudreve/v3/models"
-	"github.com/cloudreve/Cloudreve/v3/pkg/aria2/rpc"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestDummyAria2(t *testing.T) {
@@ -37,18 +35,11 @@ func TestDummyAria2(t *testing.T) {
 func TestGetStatus(t *testing.T) {
 	a := assert.New(t)
 
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "complete"}), Complete)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "active",
-		BitTorrent: rpc.BitTorrentInfo{Mode: ""}}), Downloading)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "active",
-		BitTorrent:  rpc.BitTorrentInfo{Mode: "single"},
-		TotalLength: "100", CompletedLength: "50"}), Downloading)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "active",
-		BitTorrent:  rpc.BitTorrentInfo{Mode: "multi"},
-		TotalLength: "100", CompletedLength: "100"}), Seeding)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "waiting"}), Ready)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "paused"}), Paused)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "error"}), Error)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "removed"}), Canceled)
-	a.Equal(GetStatus(rpc.StatusInfo{Status: "unknown"}), Unknown)
+	a.Equal(GetStatus("complete"), Complete)
+	a.Equal(GetStatus("active"), Downloading)
+	a.Equal(GetStatus("waiting"), Ready)
+	a.Equal(GetStatus("paused"), Paused)
+	a.Equal(GetStatus("error"), Error)
+	a.Equal(GetStatus("removed"), Canceled)
+	a.Equal(GetStatus("unknown"), Unknown)
 }

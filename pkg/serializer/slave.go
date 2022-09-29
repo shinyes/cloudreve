@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"encoding/gob"
 	"fmt"
-
 	model "github.com/cloudreve/Cloudreve/v3/models"
 )
 

@@ -98,7 +98,16 @@ func Init(path string, statics fs.FS) {
 	}
 
 	for _, dependency := range dependencies {
-		if dependency.mode == conf.SystemConfig.Mode || dependency.mode == "both" {
+		switch dependency.mode {
+		case "master":
+			if conf.SystemConfig.Mode == "master" {
+				dependency.factory()
+			}
+		case "slave":
+			if conf.SystemConfig.Mode == "slave" {
+				dependency.factory()
+			}
+		default:
 			dependency.factory()
 		}
 	}

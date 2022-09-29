@@ -5,9 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"net/url"
-	"time"
-
 	model "github.com/cloudreve/Cloudreve/v3/models"
 	"github.com/cloudreve/Cloudreve/v3/pkg/cluster"
 	"github.com/cloudreve/Cloudreve/v3/pkg/filesystem/driver"
@@ -16,6 +13,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/mq"
 	"github.com/cloudreve/Cloudreve/v3/pkg/request"
 	"github.com/cloudreve/Cloudreve/v3/pkg/serializer"
+	"net/url"
+	"time"
 )
 
 // Driver 影子存储策略，将上传任务指派给从机节点处理，并等待从机通知上传结果
@@ -119,6 +118,6 @@ func (d *Driver) List(ctx context.Context, path string, recursive bool) ([]respo
 }
 
 // 取消上传凭证
-func (d *Driver) CancelToken(ctx context.Context, uploadSession *serializer.UploadSession) error {
+func (handler Driver) CancelToken(ctx context.Context, uploadSession *serializer.UploadSession) error {
 	return nil
 }

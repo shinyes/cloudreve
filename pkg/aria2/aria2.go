@@ -3,6 +3,8 @@ package aria2
 import (
 	"context"
 	"fmt"
+	"github.com/cloudreve/Cloudreve/v3/pkg/cluster"
+	"github.com/cloudreve/Cloudreve/v3/pkg/mq"
 	"net/url"
 	"sync"
 	"time"
@@ -12,8 +14,6 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/aria2/monitor"
 	"github.com/cloudreve/Cloudreve/v3/pkg/aria2/rpc"
 	"github.com/cloudreve/Cloudreve/v3/pkg/balancer"
-	"github.com/cloudreve/Cloudreve/v3/pkg/cluster"
-	"github.com/cloudreve/Cloudreve/v3/pkg/mq"
 )
 
 // Instance 默认使用的Aria2处理实例
@@ -40,7 +40,7 @@ func Init(isReload bool, pool cluster.Pool, mqClient mq.MQ) {
 
 	if !isReload {
 		// 从数据库中读取未完成任务，创建监控
-		unfinished := model.GetDownloadsByStatus(common.Ready, common.Paused, common.Downloading, common.Seeding)
+		unfinished := model.GetDownloadsByStatus(common.Ready, common.Paused, common.Downloading)
 
 		for i := 0; i < len(unfinished); i++ {
 			// 创建任务监控

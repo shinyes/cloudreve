@@ -4,11 +4,13 @@ import (
 	"context"
 	_ "embed"
 	"flag"
+	"io"
 	"io/fs"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +19,8 @@ import (
 	"github.com/cloudreve/Cloudreve/v3/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v3/pkg/util"
 	"github.com/cloudreve/Cloudreve/v3/routers"
+
+	"github.com/mholt/archiver/v4"
 )
 
 var (
@@ -36,7 +40,10 @@ func init() {
 	flag.StringVar(&scriptName, "database-script", "", "Name of database util script.")
 	flag.Parse()
 
-	staticFS = bootstrap.NewFS(staticZip)
+	staticFS = archiver.ArchiveFS{
+		Stream: io.NewSectionReader(strings.NewReader(staticZip), 0, int64(len(staticZip))),
+		Format: archiver.Zip{},
+	}
 	bootstrap.Init(confPath, staticFS)
 }
 

@@ -17,7 +17,6 @@ type database struct {
 	DBFile      string
 	Port        int
 	Charset     string
-	UnixSocket  bool
 }
 
 // system 系统通用配置

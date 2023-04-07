@@ -44,6 +44,8 @@ const (
 
 	ThumbStatusMetadataKey  = "thumb_status"
 	ThumbSidecarMetadataKey = "thumb_sidecar"
+
+	ChecksumMetadataKey = "webdav_checksum"
 )
 
 func init() {
@@ -430,6 +432,10 @@ func (file *File) resetThumb() error {
 
 	delete(file.MetadataSerialized, ThumbStatusMetadataKey)
 	metaValue, err := json.Marshal(&file.MetadataSerialized)
+	if err != nil {
+		return err
+	}
+
 	file.Metadata = string(metaValue)
 	return err
 }

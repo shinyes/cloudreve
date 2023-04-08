@@ -44,8 +44,6 @@ const (
 
 	ThumbStatusMetadataKey  = "thumb_status"
 	ThumbSidecarMetadataKey = "thumb_sidecar"
-
-	ChecksumMetadataKey = "webdav_checksum"
 )
 
 func init() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"net/url"
 	"strconv"
 	"strings"
@@ -169,7 +170,7 @@ type (
 		// FolderPropsCacheTTL returns the cache TTL of folder summary.
 		FolderPropsCacheTTL(ctx context.Context) int
 		// FileViewers returns the file viewers settings.
-		FileViewers(ctx context.Context) []ViewerGroup
+		FileViewers(ctx context.Context) []types.ViewerGroup
 		// ViewerSessionTTL returns the TTL of viewer session.
 		ViewerSessionTTL(ctx context.Context) int
 		// MimeMapping returns the extension to MIME mapping settings.
@@ -232,11 +233,11 @@ func (s *settingProvider) Avatar(ctx context.Context) *Avatar {
 	}
 }
 
-func (s *settingProvider) FileViewers(ctx context.Context) []ViewerGroup {
+func (s *settingProvider) FileViewers(ctx context.Context) []types.ViewerGroup {
 	raw := s.getString(ctx, "file_viewers", "[]")
-	var viewers []ViewerGroup
+	var viewers []types.ViewerGroup
 	if err := json.Unmarshal([]byte(raw), &viewers); err != nil {
-		return []ViewerGroup{}
+		return []types.ViewerGroup{}
 	}
 
 	return viewers

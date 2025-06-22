@@ -3,6 +3,7 @@ package basic
 import (
 	"github.com/cloudreve/Cloudreve/v4/application/dependency"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
+	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/setting"
 	"github.com/cloudreve/Cloudreve/v4/service/user"
 	"github.com/gin-gonic/gin"
@@ -39,7 +40,7 @@ type SiteConfig struct {
 	EmojiPreset       string                    `json:"emoji_preset,omitempty"`
 	MapProvider       setting.MapProvider       `json:"map_provider,omitempty"`
 	GoogleMapTileType setting.MapGoogleTileType `json:"google_map_tile_type,omitempty"`
-	FileViewers       []setting.ViewerGroup     `json:"file_viewers,omitempty"`
+	FileViewers       []types.ViewerGroup       `json:"file_viewers,omitempty"`
 	MaxBatchSize      int                       `json:"max_batch_size,omitempty"`
 	ThumbnailWidth    int                       `json:"thumbnail_width,omitempty"`
 	ThumbnailHeight   int                       `json:"thumbnail_height,omitempty"`

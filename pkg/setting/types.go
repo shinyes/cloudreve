@@ -177,42 +177,6 @@ type MapSetting struct {
 // Viewer related
 
 type (
-	ViewerAction string
-	ViewerType   string
-)
-
-const (
-	ViewerActionView = "view"
-	ViewerActionEdit = "edit"
-
-	ViewerTypeBuiltin = "builtin"
-	ViewerTypeWopi    = "wopi"
-)
-
-type Viewer struct {
-	ID          string                             `json:"id"`
-	Type        ViewerType                         `json:"type"`
-	DisplayName string                             `json:"display_name"`
-	Exts        []string                           `json:"exts"`
-	Url         string                             `json:"url,omitempty"`
-	Icon        string                             `json:"icon,omitempty"`
-	WopiActions map[string]map[ViewerAction]string `json:"wopi_actions,omitempty"`
-	Props       map[string]string                  `json:"props,omitempty"`
-	MaxSize     int64                              `json:"max_size,omitempty"`
-	Disabled    bool                               `json:"disabled,omitempty"`
-	Templates   []NewFileTemplate                  `json:"templates,omitempty"`
-}
-
-type ViewerGroup struct {
-	Viewers []Viewer `json:"viewers"`
-}
-
-type NewFileTemplate struct {
-	Ext         string `json:"ext"`
-	DisplayName string `json:"display_name"`
-}
-
-type (
 	SearchCategory string
 )
 

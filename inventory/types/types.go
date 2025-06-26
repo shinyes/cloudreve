@@ -206,6 +206,7 @@ const (
 	GroupPermission_CommunityPlaceholder4
 	GroupPermissionSetExplicitUser_placeholder
 	GroupPermissionIgnoreFileOwnership // not used
+	GroupPermissionUniqueRedirectDirectLink
 )
 
 const (

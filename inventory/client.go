@@ -75,7 +75,7 @@ func NewRawEntClient(l logging.Logger, config conf.ConfigProvider) (*ent.Client,
 			client, err = sql.Open("sqlite3", util.RelativePath(dbConfig.DBFile))
 		case conf.PostgresDB:
 			l.Info("Connect to Postgres database %q.", dbConfig.Host)
-			client, err = sql.Open("postgres", fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=allow",
+			client, err = sql.Open("postgres", fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
 				dbConfig.Host,
 				dbConfig.User,
 				dbConfig.Password,

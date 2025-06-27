@@ -100,8 +100,8 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 		SetSettings(group.Settings).
 		ClearStoragePolicies()
 
-	if group.StoragePolicyID > 0 {
-		stm.SetStoragePolicyID(group.StoragePolicyID)
+	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
+		stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
 	}
 
 	res, err := stm.Save(ctx)

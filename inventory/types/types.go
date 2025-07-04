@@ -177,6 +177,8 @@ type (
 	ShareProps struct {
 		// Whether to share view setting from owner
 		ShareView bool `json:"share_view,omitempty"`
+		// Whether to automatically show readme file in share view
+		ShowReadMe bool `json:"show_read_me,omitempty"`
 	}
 
 	FileTypeIconSetting struct {

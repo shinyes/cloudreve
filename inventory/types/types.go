@@ -90,6 +90,8 @@ type (
 		UseCname bool `json:"use_cname,omitempty"`
 		// CDN domain does not need to be signed.
 		SourceAuth bool `json:"source_auth,omitempty"`
+		// QiniuUploadCdn whether to use CDN for Qiniu upload.
+		QiniuUploadCdn bool `json:"qiniu_upload_cdn,omitempty"`
 	}
 
 	FileType         int

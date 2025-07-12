@@ -324,6 +324,22 @@ var (
 			},
 		},
 	}
+
+	defaultFileProps = []types.CustomProps{
+		{
+			ID:   "description",
+			Type: types.CustomPropsTypeText,
+			Name: "fileManager.description",
+			Icon: "fluent:slide-text-24-filled",
+		},
+		{
+			ID:   "rating",
+			Type: types.CustomPropsTypeRating,
+			Name: "fileManager.rating",
+			Icon: "fluent:data-bar-vertical-star-24-filled",
+			Max:  5,
+		},
+	}
 )
 
 var DefaultSettings = map[string]string{
@@ -516,4 +532,10 @@ func init() {
 	}
 
 	DefaultSettings["file_viewers"] = string(viewers)
+
+	customProps, err := json.Marshal(defaultFileProps)
+	if err != nil {
+		panic(err)
+	}
+	DefaultSettings["custom_props"] = string(customProps)
 }

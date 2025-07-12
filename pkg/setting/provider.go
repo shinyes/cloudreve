@@ -196,6 +196,8 @@ type (
 		LibRawThumbExts(ctx context.Context) []string
 		// LibRawThumbPath returns the path of libraw executable.
 		LibRawThumbPath(ctx context.Context) string
+		// CustomProps returns the custom props settings.
+		CustomProps(ctx context.Context) []types.CustomProps
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -222,6 +224,15 @@ type (
 		adapterChain SettingStoreAdapter
 	}
 )
+
+func (s *settingProvider) CustomProps(ctx context.Context) []types.CustomProps {
+	raw := s.getString(ctx, "custom_props", "[]")
+	var props []types.CustomProps
+	if err := json.Unmarshal([]byte(raw), &props); err != nil {
+		return []types.CustomProps{}
+	}
+	return props
+}
 
 func (s *settingProvider) License(ctx context.Context) string {
 	return s.getString(ctx, "license", "")

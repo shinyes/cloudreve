@@ -45,6 +45,7 @@ type SiteConfig struct {
 	MaxBatchSize      int                       `json:"max_batch_size,omitempty"`
 	ThumbnailWidth    int                       `json:"thumbnail_width,omitempty"`
 	ThumbnailHeight   int                       `json:"thumbnail_height,omitempty"`
+	CustomProps       []types.CustomProps       `json:"custom_props,omitempty"`
 
 	// App settings
 	AppPromotion bool `json:"app_promotion,omitempty"`
@@ -87,6 +88,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		explorerSettings := settings.ExplorerFrontendSettings(c)
 		mapSettings := settings.MapSetting(c)
 		fileViewers := settings.FileViewers(c)
+		customProps := settings.CustomProps(c)
 		maxBatchSize := settings.MaxBatchedFile(c)
 		w, h := settings.ThumbSize(c)
 		for i := range fileViewers {
@@ -102,6 +104,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			GoogleMapTileType: mapSettings.GoogleTileType,
 			ThumbnailWidth:    w,
 			ThumbnailHeight:   h,
+			CustomProps:       customProps,
 		}, nil
 	case "emojis":
 		emojis := settings.EmojiPresets(c)

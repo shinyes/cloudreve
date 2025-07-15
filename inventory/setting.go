@@ -430,6 +430,7 @@ var DefaultSettings = map[string]string{
 	"thumb_ffmpeg_max_size":                      "10737418240", // 10 GB
 	"thumb_ffmpeg_exts":                          "3g2,3gp,asf,asx,avi,divx,flv,m2ts,m2v,m4v,mkv,mov,mp4,mpeg,mpg,mts,mxf,ogv,rm,swf,webm,wmv",
 	"thumb_ffmpeg_seek":                          "00:00:01.00",
+	"thumb_ffmpeg_extra_args":                    "-hwaccel auto",
 	"thumb_libreoffice_path":                     "soffice",
 	"thumb_libreoffice_max_size":                 "78643200", // 75 MB
 	"thumb_libreoffice_enabled":                  "0",

@@ -202,6 +202,8 @@ type (
 		CustomNavItems(ctx context.Context) []CustomNavItem
 		// CustomHTML returns the custom HTML settings.
 		CustomHTML(ctx context.Context) *CustomHTML
+		// FFMpegExtraArgs returns the extra arguments of ffmpeg thumb generator.
+		FFMpegExtraArgs(ctx context.Context) string
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -404,6 +406,10 @@ func (s *settingProvider) FFMpegThumbExts(ctx context.Context) []string {
 
 func (s *settingProvider) FFMpegThumbSeek(ctx context.Context) string {
 	return s.getString(ctx, "thumb_ffmpeg_seek", "00:00:01.00")
+}
+
+func (s *settingProvider) FFMpegExtraArgs(ctx context.Context) string {
+	return s.getString(ctx, "thumb_ffmpeg_extra_args", "")
 }
 
 func (s *settingProvider) FFMpegThumbMaxSize(ctx context.Context) int64 {

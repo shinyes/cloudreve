@@ -200,6 +200,8 @@ type (
 		CustomProps(ctx context.Context) []types.CustomProps
 		// CustomNavItems returns the custom nav items settings.
 		CustomNavItems(ctx context.Context) []CustomNavItem
+		// CustomHTML returns the custom HTML settings.
+		CustomHTML(ctx context.Context) *CustomHTML
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -227,6 +229,13 @@ type (
 	}
 )
 
+func (s *settingProvider) CustomHTML(ctx context.Context) *CustomHTML {
+	return &CustomHTML{
+		HeadlessFooter: s.getString(ctx, "headless_footer_html", ""),
+		HeadlessBody:   s.getString(ctx, "headless_bottom_html", ""),
+		SidebarBottom:  s.getString(ctx, "sidebar_bottom_html", ""),
+	}
+}
 func (s *settingProvider) CustomNavItems(ctx context.Context) []CustomNavItem {
 	raw := s.getString(ctx, "custom_nav_items", "[]")
 	var items []CustomNavItem

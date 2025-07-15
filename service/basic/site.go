@@ -21,6 +21,7 @@ type SiteConfig struct {
 	Logo           string                  `json:"logo,omitempty"`
 	LogoLight      string                  `json:"logo_light,omitempty"`
 	CustomNavItems []setting.CustomNavItem `json:"custom_nav_items,omitempty"`
+	CustomHTML     *setting.CustomHTML     `json:"custom_html,omitempty"`
 
 	// Login Section
 	LoginCaptcha     bool                `json:"login_captcha,omitempty"`
@@ -130,6 +131,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 	capCaptcha := settings.CapCaptcha(c)
 	appSetting := settings.AppSetting(c)
 	customNavItems := settings.CustomNavItems(c)
+	customHTML := settings.CustomHTML(c)
 	return &SiteConfig{
 		InstanceID:      siteBasic.ID,
 		SiteName:        siteBasic.Name,
@@ -146,6 +148,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 		CapAssetServer:  capCaptcha.AssetServer,
 		AppPromotion:    appSetting.Promotion,
 		CustomNavItems:  customNavItems,
+		CustomHTML:      customHTML,
 	}, nil
 }
 

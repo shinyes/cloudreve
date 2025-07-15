@@ -215,3 +215,9 @@ type CustomNavItem struct {
 	Name string `json:"name"`
 	URL  string `json:"url"`
 }
+
+type CustomHTML struct {
+	HeadlessFooter string `json:"headless_footer,omitempty"`
+	HeadlessBody   string `json:"headless_bottom,omitempty"`
+	SidebarBottom  string `json:"sidebar_bottom,omitempty"`
+}

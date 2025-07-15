@@ -41,7 +41,7 @@ func (f *FfmpegGenerator) Generate(ctx context.Context, es entitysource.EntitySo
 	tempOutputPath := filepath.Join(
 		util.DataPath(f.settings.TempPath(ctx)),
 		thumbTempFolder,
-		fmt.Sprintf("thumb_%s.%s", uuid.Must(uuid.NewV4()).String(), f.settings.ThumbEncode(ctx).Format),
+		fmt.Sprintf("thumb_%s.png", uuid.Must(uuid.NewV4()).String()),
 	)
 
 	if err := util.CreatNestedFolder(filepath.Dir(tempOutputPath)); err != nil {

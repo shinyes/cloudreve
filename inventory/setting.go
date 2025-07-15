@@ -517,6 +517,7 @@ var DefaultSettings = map[string]string{
 	"qq_login":                                   `0`,
 	"qq_login_config":                            `{"direct_sign_in":false}`,
 	"license":                                    "",
+	"custom_nav_items":                           "[]",
 }
 
 func init() {

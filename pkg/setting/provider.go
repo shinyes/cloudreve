@@ -198,6 +198,8 @@ type (
 		LibRawThumbPath(ctx context.Context) string
 		// CustomProps returns the custom props settings.
 		CustomProps(ctx context.Context) []types.CustomProps
+		// CustomNavItems returns the custom nav items settings.
+		CustomNavItems(ctx context.Context) []CustomNavItem
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -225,6 +227,14 @@ type (
 	}
 )
 
+func (s *settingProvider) CustomNavItems(ctx context.Context) []CustomNavItem {
+	raw := s.getString(ctx, "custom_nav_items", "[]")
+	var items []CustomNavItem
+	if err := json.Unmarshal([]byte(raw), &items); err != nil {
+		return []CustomNavItem{}
+	}
+	return items
+}
 func (s *settingProvider) CustomProps(ctx context.Context) []types.CustomProps {
 	raw := s.getString(ctx, "custom_props", "[]")
 	var props []types.CustomProps

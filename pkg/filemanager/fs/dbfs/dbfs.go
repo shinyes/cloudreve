@@ -652,7 +652,8 @@ func (f *DBFS) getPreferredPolicy(ctx context.Context, file *File) (*ent.Storage
 		return nil, fmt.Errorf("owner group not loaded")
 	}
 
-	groupPolicy, err := f.storagePolicyClient.GetByGroup(ctx, ownerGroup)
+	sc, _ := inventory.InheritTx(ctx, f.storagePolicyClient)
+	groupPolicy, err := sc.GetByGroup(ctx, ownerGroup)
 	if err != nil {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
 	}

@@ -164,14 +164,6 @@ func (s *server) Start() error {
 }
 
 func (s *server) Close() {
-	// Close audit recorder first to ensure all logs are persisted
-	if s.auditRecorder != nil {
-		s.logger.Info("Closing audit recorder...")
-		if err := s.auditRecorder.Close(); err != nil {
-			s.logger.Error("Failed to close audit recorder: %s", err)
-		}
-	}
-
 	if s.dbClient != nil {
 		s.logger.Info("Shutting down database connection...")
 		if err := s.dbClient.Close(); err != nil {

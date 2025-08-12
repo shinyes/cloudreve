@@ -46,7 +46,7 @@ type System struct {
 	SessionSecret string
 	HashIDSalt    string // deprecated
 	GracePeriod   int    `validate:"gte=0"`
-	ProxyHeader   string `validate:"required_with=Listen"`
+	ProxyHeader   string
 	LogLevel      string `validate:"oneof=debug info warning error"`
 }
 

@@ -101,6 +101,8 @@ type (
 		SourceAuth bool `json:"source_auth,omitempty"`
 		// QiniuUploadCdn whether to use CDN for Qiniu upload.
 		QiniuUploadCdn bool `json:"qiniu_upload_cdn,omitempty"`
+		// ChunkConcurrency the number of chunks to upload concurrently.
+		ChunkConcurrency int `json:"chunk_concurrency,omitempty"`
 	}
 
 	FileType         int

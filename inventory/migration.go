@@ -280,6 +280,53 @@ type (
 
 var patches = []Patch{
 	{
+		Name:       "apply_default_archive_viewer",
+		EndVersion: "4.7.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			fileViewersSetting, err := client.Setting.Query().Where(setting.Name("file_viewers")).First(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query file_viewers setting: %w", err)
+			}
+
+			var fileViewers []types.ViewerGroup
+			if err := json.Unmarshal([]byte(fileViewersSetting.Value), &fileViewers); err != nil {
+				return fmt.Errorf("failed to unmarshal file_viewers setting: %w", err)
+			}
+
+			fileViewerExisted := false
+			for _, viewer := range fileViewers[0].Viewers {
+				if viewer.ID == "archive" {
+					fileViewerExisted = true
+					break
+				}
+			}
+
+			// 2.2 If not existed, add it
+			if !fileViewerExisted {
+				// Found existing archive viewer default setting
+				var defaultArchiveViewer types.Viewer
+				for _, viewer := range defaultFileViewers[0].Viewers {
+					if viewer.ID == "archive" {
+						defaultArchiveViewer = viewer
+						break
+					}
+				}
+
+				fileViewers[0].Viewers = append(fileViewers[0].Viewers, defaultArchiveViewer)
+				newFileViewersSetting, err := json.Marshal(fileViewers)
+				if err != nil {
+					return fmt.Errorf("failed to marshal file_viewers setting: %w", err)
+				}
+
+				if _, err := client.Setting.UpdateOne(fileViewersSetting).SetValue(string(newFileViewersSetting)).Save(ctx); err != nil {
+					return fmt.Errorf("failed to update file_viewers setting: %w", err)
+				}
+			}
+
+			return nil
+		},
+	},
+	{
 		Name:       "apply_default_excalidraw_viewer",
 		EndVersion: "4.1.0",
 		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {

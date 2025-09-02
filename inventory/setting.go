@@ -321,6 +321,15 @@ var (
 						},
 					},
 				},
+				{
+					ID:          "archive",
+					Type:        types.ViewerTypeBuiltin,
+					DisplayName: "fileManager.archivePreview",
+					Exts:        []string{"zip", "7z"},
+					RequiredGroupPermission: []types.GroupPermission{
+						types.GroupPermissionArchiveTask,
+					},
+				},
 			},
 		},
 	}
@@ -347,19 +356,19 @@ var (
 
 type MailTemplateContent struct {
 	Language        string
-	EmailIsAutoSend string  // Translation of `此邮件由系统自动发送。`
+	EmailIsAutoSend string // Translation of `此邮件由系统自动发送。`
 
-	ActiveTitle     string  // Translation of `激活你的账号`
-	ActiveDes       string  // Translation of `请点击下方按钮确认你的电子邮箱并完成账号注册，此链接有效期为 24 小时。`
-	ActiveButton    string  // Translation of `确认激活`
+	ActiveTitle  string // Translation of `激活你的账号`
+	ActiveDes    string // Translation of `请点击下方按钮确认你的电子邮箱并完成账号注册，此链接有效期为 24 小时。`
+	ActiveButton string // Translation of `确认激活`
 
-	ResetTitle      string  // Translation of `重设密码`
-	ResetDes        string  // Translation of `请点击下方按钮重设你的密码，此链接有效期为 1 小时。`
-	ResetButton     string  // Translation of `重设密码`
+	ResetTitle  string // Translation of `重设密码`
+	ResetDes    string // Translation of `请点击下方按钮重设你的密码，此链接有效期为 1 小时。`
+	ResetButton string // Translation of `重设密码`
 }
 
 var mailTemplateContents = []MailTemplateContent{
-    {
+	{
 		Language:        "en-US",
 		EmailIsAutoSend: "This email is sent automatically.",
 		ActiveTitle:     "Confirm your account",
@@ -368,8 +377,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Reset your password",
 		ResetDes:        "Please click the button below to reset your password. This link is valid for 1 hour.",
 		ResetButton:     "Reset",
-    },
-    {
+	},
+	{
 		Language:        "zh-CN",
 		EmailIsAutoSend: "此邮件由系统自动发送。",
 		ActiveTitle:     "激活你的账号",
@@ -378,8 +387,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "重设密码",
 		ResetDes:        "请点击下方按钮重设你的密码，此链接有效期为 1 小时。",
 		ResetButton:     "重设密码",
-    },
-    {
+	},
+	{
 		Language:        "zh-TW",
 		EmailIsAutoSend: "此郵件由系統自動發送。",
 		ActiveTitle:     "激活你的帳號",
@@ -388,8 +397,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "重設密碼",
 		ResetDes:        "請點擊下方按鈕重設你的密碼，此連結有效期為 1 小時。",
 		ResetButton:     "重設密碼",
-    },
-    {
+	},
+	{
 		Language:        "de-DE",
 		EmailIsAutoSend: "Diese E-Mail wird automatisch vom System gesendet.",
 		ActiveTitle:     "Bestätigen Sie Ihr Konto",
@@ -398,8 +407,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Passwort zurücksetzen",
 		ResetDes:        "Bitte klicken Sie auf die Schaltfläche unten, um Ihr Passwort zurückzusetzen. Dieser Link ist 1 Stunde lang gültig.",
 		ResetButton:     "Passwort zurücksetzen",
-    },
-    {
+	},
+	{
 		Language:        "es-ES",
 		EmailIsAutoSend: "Este correo electrónico se envía automáticamente.",
 		ActiveTitle:     "Confirma tu cuenta",
@@ -408,8 +417,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Restablecer tu contraseña",
 		ResetDes:        "Por favor, haz clic en el botón de abajo para restablecer tu contraseña. Este enlace es válido por 1 hora.",
 		ResetButton:     "Restablecer",
-    },
-    {
+	},
+	{
 		Language:        "fr-FR",
 		EmailIsAutoSend: "Cet e-mail est envoyé automatiquement.",
 		ActiveTitle:     "Confirmer votre compte",
@@ -418,8 +427,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Réinitialiser votre mot de passe",
 		ResetDes:        "Veuillez cliquer sur le bouton ci-dessous pour réinitialiser votre mot de passe. Ce lien est valable 1 heure.",
 		ResetButton:     "Réinitialiser",
-    },
-    {
+	},
+	{
 		Language:        "it-IT",
 		EmailIsAutoSend: "Questa email è inviata automaticamente.",
 		ActiveTitle:     "Conferma il tuo account",
@@ -428,8 +437,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Reimposta la tua password",
 		ResetDes:        "Per favore, clicca sul pulsante qui sotto per reimpostare la tua password. Questo link è valido per 1 ora.",
 		ResetButton:     "Reimposta",
-    },
-    {
+	},
+	{
 		Language:        "ja-JP",
 		EmailIsAutoSend: "このメールはシステムによって自動的に送信されました。",
 		ActiveTitle:     "アカウントを確認する",
@@ -438,8 +447,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "パスワードをリセットする",
 		ResetDes:        "以下のボタンをクリックしてパスワードをリセットしてください。このリンクは1時間有効です。",
 		ResetButton:     "リセットする",
-    },
-    {
+	},
+	{
 		Language:        "ko-KR",
 		EmailIsAutoSend: "이 이메일은 시스템에 의해 자동으로 전송됩니다.",
 		ActiveTitle:     "계정 확인",
@@ -448,8 +457,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "비밀번호 재설정",
 		ResetDes:        "아래 버튼을 클릭하여 비밀번호를 재설정하세요. 이 링크는 1시간 동안 유효합니다.",
 		ResetButton:     "비밀번호 재설정",
-    },
-    {
+	},
+	{
 		Language:        "pt-BR",
 		EmailIsAutoSend: "Este e-mail é enviado automaticamente.",
 		ActiveTitle:     "Confirme sua conta",
@@ -458,8 +467,8 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Redefinir sua senha",
 		ResetDes:        "Por favor, clique no botão abaixo para redefinir sua senha. Este link é válido por 1 hora.",
 		ResetButton:     "Redefinir",
-    },
-    {
+	},
+	{
 		Language:        "ru-RU",
 		EmailIsAutoSend: "Это письмо отправлено автоматически.",
 		ActiveTitle:     "Подтвердите вашу учетную запись",
@@ -468,7 +477,7 @@ var mailTemplateContents = []MailTemplateContent{
 		ResetTitle:      "Сбросить ваш пароль",
 		ResetDes:        "Пожалуйста, нажмите кнопку ниже, чтобы сбросить ваш пароль. Эта ссылка действительна в течение 1 часа.",
 		ResetButton:     "Сбросить пароль",
-    },
+	},
 }
 
 var DefaultSettings = map[string]string{
@@ -675,7 +684,7 @@ func init() {
 		activeMails = append(activeMails, map[string]string{
 			"language": langContents.Language,
 			"title":    "[{{ .CommonContext.SiteBasic.Name }}] " + langContents.ActiveTitle,
-			"body":     util.Replace(map[string]string{
+			"body": util.Replace(map[string]string{
 				"[[ .Language ]]":        langContents.Language,
 				"[[ .ActiveTitle ]]":     langContents.ActiveTitle,
 				"[[ .ActiveDes ]]":       langContents.ActiveDes,
@@ -695,7 +704,7 @@ func init() {
 		resetMails = append(resetMails, map[string]string{
 			"language": langContents.Language,
 			"title":    "[{{ .CommonContext.SiteBasic.Name }}] " + langContents.ResetTitle,
-			"body":     util.Replace(map[string]string{
+			"body": util.Replace(map[string]string{
 				"[[ .Language ]]":        langContents.Language,
 				"[[ .ResetTitle ]]":      langContents.ResetTitle,
 				"[[ .ResetDes ]]":        langContents.ResetDes,

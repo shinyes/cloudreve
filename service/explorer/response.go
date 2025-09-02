@@ -26,6 +26,16 @@ import (
 	"github.com/samber/lo"
 )
 
+type ArchiveListFilesResponse struct {
+	Files []manager.ArchivedFile `json:"files"`
+}
+
+func BuildArchiveListFilesResponse(files []manager.ArchivedFile) *ArchiveListFilesResponse {
+	return &ArchiveListFilesResponse{
+		Files: files,
+	}
+}
+
 type PutRelativeResponse struct {
 	Name string
 	Url  string

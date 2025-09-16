@@ -382,7 +382,12 @@ func (handler Driver) Thumb(ctx context.Context, expire *time.Time, ext string, 
 func (handler Driver) Source(ctx context.Context, e fs.Entity, args *driver.GetSourceArgs) (string, error) {
 	// 添加各项设置
 	options := urlOption{}
+
 	if args.Speed > 0 {
+		// Byte 转换为 bit
+		args.Speed *= 8
+
+		// COS对速度值有范围限制
 		if args.Speed < 819200 {
 			args.Speed = 819200
 		}
@@ -391,6 +396,7 @@ func (handler Driver) Source(ctx context.Context, e fs.Entity, args *driver.GetS
 		}
 		options.Speed = args.Speed
 	}
+
 	if args.IsDownload {
 		encodedFilename := url.PathEscape(args.DisplayName)
 		options.ContentDescription = fmt.Sprintf(`attachment; filename="%s"; filename*=UTF-8''%s`,

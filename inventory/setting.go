@@ -636,6 +636,8 @@ var DefaultSettings = map[string]string{
 	"media_meta_ffprobe_path":                    "ffprobe",
 	"media_meta_ffprobe_size_local":              "0",
 	"media_meta_ffprobe_size_remote":             "0",
+	"media_meta_geocoding":                       "0",
+	"media_meta_geocoding_mapbox_ak":             "",
 	"site_logo":                                  "/static/img/logo.svg",
 	"site_logo_light":                            "/static/img/logo_light.svg",
 	"tos_url":                                    "https://cloudreve.org/privacy-policy",

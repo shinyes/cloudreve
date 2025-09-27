@@ -47,6 +47,7 @@ type SiteConfig struct {
 	EmojiPreset       string                    `json:"emoji_preset,omitempty"`
 	MapProvider       setting.MapProvider       `json:"map_provider,omitempty"`
 	GoogleMapTileType setting.MapGoogleTileType `json:"google_map_tile_type,omitempty"`
+	MapboxAK          string                    `json:"mapbox_ak,omitempty"`
 	FileViewers       []types.ViewerGroup       `json:"file_viewers,omitempty"`
 	MaxBatchSize      int                       `json:"max_batch_size,omitempty"`
 	ThumbnailWidth    int                       `json:"thumbnail_width,omitempty"`
@@ -111,6 +112,7 @@ func (s *GetSettingService) GetSiteConfig(c *gin.Context) (*SiteConfig, error) {
 			Icons:             explorerSettings.Icons,
 			MapProvider:       mapSettings.Provider,
 			GoogleMapTileType: mapSettings.GoogleTileType,
+			MapboxAK:          mapSettings.MapboxAK,
 			ThumbnailWidth:    w,
 			ThumbnailHeight:   h,
 			CustomProps:       customProps,

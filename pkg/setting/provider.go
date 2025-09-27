@@ -310,6 +310,7 @@ func (s *settingProvider) MapSetting(ctx context.Context) *MapSetting {
 	return &MapSetting{
 		Provider:       MapProvider(s.getString(ctx, "map_provider", "openstreetmap")),
 		GoogleTileType: MapGoogleTileType(s.getString(ctx, "map_google_tile_type", "roadmap")),
+		MapboxAK:       s.getString(ctx, "map_mapbox_ak", ""),
 	}
 }
 

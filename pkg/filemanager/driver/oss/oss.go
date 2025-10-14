@@ -65,12 +65,8 @@ type Driver struct {
 type key int
 
 const (
-	chunkRetrySleep   = time.Duration(5) * time.Second
-	uploadIdParam     = "uploadId"
-	partNumberParam   = "partNumber"
-	callbackParam     = "callback"
-	completeAllHeader = "x-oss-complete-all"
-	maxDeleteBatch    = 1000
+	chunkRetrySleep = time.Duration(5) * time.Second
+	maxDeleteBatch  = 1000
 
 	// MultiPartUploadThreshold 服务端使用分片上传的阈值
 	MultiPartUploadThreshold int64 = 5 * (1 << 30) // 5GB
@@ -530,6 +526,11 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 				UploadId:   imur.UploadId,
 				PartNumber: int32(c.Index() + 1),
 				Body:       chunk,
+				RequestCommon: oss.RequestCommon{
+					Headers: map[string]string{
+						"Content-Type": "application/octet-stream",
+					},
+				},
 			}, oss.PresignExpires(ttl))
 			if err != nil {
 				return err
@@ -545,12 +546,19 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 
 	// 签名完成分片上传的URL
 	completeURL, err := handler.client.Presign(ctx, &oss.CompleteMultipartUploadRequest{
-		Bucket:          &handler.policy.BucketName,
-		Key:             &file.Props.SavePath,
-		UploadId:        imur.UploadId,
-		CompleteAll:     oss.Ptr("yes"),
-		ForbidOverwrite: oss.Ptr(strconv.FormatBool(true)),
-		Callback:        oss.Ptr(callbackPolicyEncoded),
+		Bucket:   &handler.policy.BucketName,
+		Key:      &file.Props.SavePath,
+		UploadId: imur.UploadId,
+		RequestCommon: oss.RequestCommon{
+			Parameters: map[string]string{
+				"callback": callbackPolicyEncoded,
+			},
+			Headers: map[string]string{
+				"Content-Type":           "application/octet-stream",
+				"x-oss-complete-all":     "yes",
+				"x-oss-forbid-overwrite": "true",
+			},
+		},
 	}, oss.PresignExpires(ttl))
 	if err != nil {
 		return nil, err
@@ -562,6 +570,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 		CompleteURL: completeURL.URL,
 		SessionID:   uploadSession.Props.UploadSessionID,
 		ChunkSize:   handler.chunkSize,
+		Callback:    callbackPolicyEncoded,
 	}, nil
 }
 

@@ -65,8 +65,11 @@ type Driver struct {
 type key int
 
 const (
-	chunkRetrySleep = time.Duration(5) * time.Second
-	maxDeleteBatch  = 1000
+	chunkRetrySleep       = time.Duration(5) * time.Second
+	maxDeleteBatch        = 1000
+	completeAllHeader     = "x-oss-complete-all"
+	forbidOverwriteHeader = "x-oss-forbid-overwrite"
+	trafficLimitHeader    = "x-oss-traffic-limit"
 
 	// MultiPartUploadThreshold 服务端使用分片上传的阈值
 	MultiPartUploadThreshold int64 = 5 * (1 << 30) // 5GB
@@ -427,7 +430,9 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 		if args.Speed > 838860800 {
 			args.Speed = 838860800
 		}
-		req.TrafficLimit = args.Speed
+		req.Parameters = map[string]string{
+			trafficLimitHeader: strconv.FormatInt(args.Speed, 10),
+		}
 	}
 
 	return handler.signSourceURL(ctx, e.Source(), args.Expire, req, false)
@@ -464,7 +469,7 @@ func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *t
 		query.Del("OSSAccessKeyId")
 		query.Del("Signature")
 		query.Del("response-content-disposition")
-		query.Del("x-oss-traffic-limit")
+		query.Del(trafficLimitHeader)
 		finalURL.RawQuery = query.Encode()
 	}
 	return finalURL.String(), nil
@@ -554,9 +559,9 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 				"callback": callbackPolicyEncoded,
 			},
 			Headers: map[string]string{
-				"Content-Type":           "application/octet-stream",
-				"x-oss-complete-all":     "yes",
-				"x-oss-forbid-overwrite": "true",
+				"Content-Type":        "application/octet-stream",
+				completeAllHeader:     "yes",
+				forbidOverwriteHeader: "true",
 			},
 		},
 	}, oss.PresignExpires(ttl))

@@ -67,6 +67,7 @@ type key int
 const (
 	chunkRetrySleep       = time.Duration(5) * time.Second
 	maxDeleteBatch        = 1000
+	maxSignTTL            = time.Duration(24) * time.Hour * 7
 	completeAllHeader     = "x-oss-complete-all"
 	forbidOverwriteHeader = "x-oss-forbid-overwrite"
 	trafficLimitHeader    = "x-oss-traffic-limit"
@@ -439,9 +440,13 @@ func (handler *Driver) Source(ctx context.Context, e fs.Entity, args *driver.Get
 }
 
 func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *time.Time, req *oss.GetObjectRequest, forceSign bool) (string, error) {
-	ttl := time.Duration(24) * time.Hour * 365 * 20
+	// V4 Sign 最大过期时间为7天
+	ttl := maxSignTTL
 	if expire != nil {
 		ttl = time.Until(*expire)
+		if ttl > maxSignTTL {
+			ttl = maxSignTTL
+		}
 	}
 
 	if req == nil {
@@ -466,10 +471,12 @@ func (handler *Driver) signSourceURL(ctx context.Context, path string, expire *t
 	// 公有空间替换掉Key及不支持的头
 	if !handler.policy.IsPrivate && !forceSign {
 		query := finalURL.Query()
-		query.Del("OSSAccessKeyId")
-		query.Del("Signature")
+		query.Del("x-oss-credential")
+		query.Del("x-oss-date")
+		query.Del("x-oss-expires")
+		query.Del("x-oss-signature")
+		query.Del("x-oss-signature-version")
 		query.Del("response-content-disposition")
-		query.Del(trafficLimitHeader)
 		finalURL.RawQuery = query.Encode()
 	}
 	return finalURL.String(), nil

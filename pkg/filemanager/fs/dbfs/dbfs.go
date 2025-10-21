@@ -18,6 +18,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/cache"
+	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/encrypt"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/fs"
 	"github.com/cloudreve/Cloudreve/v4/pkg/filemanager/lock"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
@@ -47,7 +48,7 @@ type (
 func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inventory.ShareClient,
 	l logging.Logger, ls lock.LockSystem, settingClient setting.Provider,
 	storagePolicyClient inventory.StoragePolicyClient, hasher hashid.Encoder, userClient inventory.UserClient,
-	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient) fs.FileSystem {
+	cache, stateKv cache.Driver, directLinkClient inventory.DirectLinkClient, encryptorFactory encrypt.CryptorFactory) fs.FileSystem {
 	return &DBFS{
 		user:                u,
 		navigators:          make(map[string]Navigator),
@@ -62,6 +63,7 @@ func NewDatabaseFS(u *ent.User, fileClient inventory.FileClient, shareClient inv
 		cache:               cache,
 		stateKv:             stateKv,
 		directLinkClient:    directLinkClient,
+		encryptorFactory:    encryptorFactory,
 	}
 }
 
@@ -80,6 +82,7 @@ type DBFS struct {
 	cache               cache.Driver
 	stateKv             cache.Driver
 	mu                  sync.Mutex
+	encryptorFactory    encrypt.CryptorFactory
 }
 
 func (f *DBFS) Recycle() {
@@ -287,6 +290,7 @@ func (f *DBFS) CreateEntity(ctx context.Context, file fs.File, policy *ent.Stora
 		Source:          req.Props.SavePath,
 		Size:            req.Props.Size,
 		UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
+		EncryptMetadata: o.encryptMetadata,
 	})
 	if err != nil {
 		_ = inventory.Rollback(tx)
@@ -617,6 +621,7 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 			ModifiedAt:      o.UploadRequest.Props.LastModified,
 			UploadSessionID: uuid.FromStringOrNil(o.UploadRequest.Props.UploadSessionID),
 			Importing:       o.UploadRequest.ImportFrom != nil,
+			EncryptMetadata: o.encryptMetadata,
 		}
 	}
 
@@ -643,6 +648,20 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 
 	file.SetEntities([]*ent.Entity{entity})
 	return newFile(parent, file), nil
+}
+
+func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.UploadRequest, policy *ent.StoragePolicy) (*types.EncryptMetadata, error) {
+	relayEnabled := policy.Settings != nil && policy.Settings.Relay
+	if (len(uploadRequest.Props.EncryptionSupported) > 0 && uploadRequest.Props.EncryptionSupported[0] == types.AlgorithmAES256CTR) || relayEnabled {
+		encryptor, err := f.encryptorFactory(types.AlgorithmAES256CTR)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get encryptor: %w", err)
+		}
+
+		return encryptor.GenerateMetadata(ctx)
+	}
+
+	return nil, nil
 }
 
 // getPreferredPolicy tries to get the preferred storage policy for the given file.

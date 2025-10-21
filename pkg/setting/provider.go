@@ -2,6 +2,7 @@ package setting
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
-
 	"github.com/cloudreve/Cloudreve/v4/pkg/auth/requestinfo"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 )
@@ -208,6 +208,8 @@ type (
 		CustomHTML(ctx context.Context) *CustomHTML
 		// FFMpegExtraArgs returns the extra arguments of ffmpeg thumb generator.
 		FFMpegExtraArgs(ctx context.Context) string
+		// MasterEncryptKey returns the master encrypt key.
+		MasterEncryptKey(ctx context.Context) []byte
 	}
 	UseFirstSiteUrlCtxKey = struct{}
 )
@@ -234,6 +236,15 @@ type (
 		adapterChain SettingStoreAdapter
 	}
 )
+
+func (s *settingProvider) MasterEncryptKey(ctx context.Context) []byte {
+	encoded := s.getString(ctx, "encrypt_master_key", "")
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return nil
+	}
+	return key
+}
 
 func (s *settingProvider) CustomHTML(ctx context.Context) *CustomHTML {
 	return &CustomHTML{

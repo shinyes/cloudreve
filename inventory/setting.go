@@ -2,8 +2,11 @@ package inventory
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/ent/setting"
@@ -661,6 +664,7 @@ var DefaultSettings = map[string]string{
 	"headless_footer_html":                       "",
 	"headless_bottom_html":                       "",
 	"sidebar_bottom_html":                        "",
+	"encrypt_master_key":                         "",
 }
 
 func init() {
@@ -721,4 +725,10 @@ func init() {
 		panic(err)
 	}
 	DefaultSettings["mail_reset_template"] = string(mailResetTemplates)
+
+	key := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, key); err != nil {
+		panic(err)
+	}
+	DefaultSettings["encrypt_master_key"] = base64.StdEncoding.EncodeToString(key)
 }

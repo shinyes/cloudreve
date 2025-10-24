@@ -665,6 +665,14 @@ var DefaultSettings = map[string]string{
 	"headless_bottom_html":                       "",
 	"sidebar_bottom_html":                        "",
 	"encrypt_master_key":                         "",
+	"encrypt_master_key_vault":                   "setting",
+	"encrypt_master_key_file":                    "",
+	"show_encryption_status":                     "1",
+}
+
+var RedactedSettings = map[string]struct{}{
+	"encrypt_master_key": {},
+	"secret_key":         {},
 }
 
 func init() {

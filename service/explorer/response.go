@@ -292,6 +292,7 @@ type Entity struct {
 	CreatedAt     time.Time        `json:"created_at"`
 	StoragePolicy *StoragePolicy   `json:"storage_policy,omitempty"`
 	CreatedBy     *user.User       `json:"created_by,omitempty"`
+	EncryptedWith types.Cipher     `json:"encrypted_with,omitempty"`
 }
 
 type Share struct {
@@ -452,6 +453,12 @@ func BuildEntity(extendedInfo *fs.FileExtendedInfo, e fs.Entity, hasher hashid.E
 		userRedacted := user.BuildUserRedacted(e.CreatedBy(), user.RedactLevelAnonymous, hasher)
 		u = &userRedacted
 	}
+
+	encryptedWith := types.Cipher("")
+	if e.Encrypted() {
+		encryptedWith = e.Props().EncryptMetadata.Algorithm
+	}
+
 	return Entity{
 		ID:            hashid.EncodeEntityID(hasher, e.ID()),
 		Type:          e.Type(),
@@ -459,6 +466,7 @@ func BuildEntity(extendedInfo *fs.FileExtendedInfo, e fs.Entity, hasher hashid.E
 		StoragePolicy: BuildStoragePolicy(extendedInfo.EntityStoragePolicies[e.PolicyID()], hasher),
 		Size:          e.Size(),
 		CreatedBy:     u,
+		EncryptedWith: encryptedWith,
 	}
 }
 

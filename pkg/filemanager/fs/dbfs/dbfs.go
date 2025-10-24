@@ -652,8 +652,8 @@ func (f *DBFS) createFile(ctx context.Context, parent *File, name string, fileTy
 
 func (f *DBFS) generateEncryptMetadata(ctx context.Context, uploadRequest *fs.UploadRequest, policy *ent.StoragePolicy) (*types.EncryptMetadata, error) {
 	relayEnabled := policy.Settings != nil && policy.Settings.Relay
-	if (len(uploadRequest.Props.EncryptionSupported) > 0 && uploadRequest.Props.EncryptionSupported[0] == types.AlgorithmAES256CTR) || relayEnabled {
-		encryptor, err := f.encryptorFactory(types.AlgorithmAES256CTR)
+	if (len(uploadRequest.Props.EncryptionSupported) > 0 && uploadRequest.Props.EncryptionSupported[0] == types.CipherAES256CTR) || relayEnabled {
+		encryptor, err := f.encryptorFactory(types.CipherAES256CTR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get encryptor: %w", err)
 		}

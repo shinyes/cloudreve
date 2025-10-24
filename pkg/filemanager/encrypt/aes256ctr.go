@@ -62,7 +62,7 @@
 // Using the factory pattern:
 //
 //	factory := NewDecrypterFactory(masterKeyVault)
-//	decrypter, err := factory(types.AlgorithmAES256CTR)
+//	decrypter, err := factory(types.CipherAES256CTR)
 //	if err != nil {
 //	    return err
 //	}
@@ -131,7 +131,7 @@ func (e *AES256CTR) GenerateMetadata(ctx context.Context) (*types.EncryptMetadat
 	}
 
 	return &types.EncryptMetadata{
-		Algorithm:    types.AlgorithmAES256CTR,
+		Algorithm:    types.CipherAES256CTR,
 		Key:          encryptedKey,
 		KeyPlainText: key,
 		IV:           iv,
@@ -144,7 +144,7 @@ func (e *AES256CTR) LoadMetadata(ctx context.Context, encryptedMetadata *types.E
 		return fmt.Errorf("encryption metadata is nil")
 	}
 
-	if encryptedMetadata.Algorithm != types.AlgorithmAES256CTR {
+	if encryptedMetadata.Algorithm != types.CipherAES256CTR {
 		return fmt.Errorf("unsupported algorithm: %s", encryptedMetadata.Algorithm)
 	}
 

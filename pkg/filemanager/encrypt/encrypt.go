@@ -23,13 +23,13 @@ type (
 		GenerateMetadata(ctx context.Context) (*types.EncryptMetadata, error)
 	}
 
-	CryptorFactory func(algorithm types.Algorithm) (Cryptor, error)
+	CryptorFactory func(algorithm types.Cipher) (Cryptor, error)
 )
 
 func NewCryptorFactory(masterKeyVault MasterEncryptKeyVault) CryptorFactory {
-	return func(algorithm types.Algorithm) (Cryptor, error) {
+	return func(algorithm types.Cipher) (Cryptor, error) {
 		switch algorithm {
-		case types.AlgorithmAES256CTR:
+		case types.CipherAES256CTR:
 			return NewAES256CTR(masterKeyVault), nil
 		default:
 			return nil, fmt.Errorf("unknown algorithm: %s", algorithm)

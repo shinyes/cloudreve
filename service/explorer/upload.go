@@ -29,7 +29,7 @@ type (
 		PolicyID            string            `json:"policy_id"`
 		Metadata            map[string]string `json:"metadata" binding:"max=256"`
 		EntityType          string            `json:"entity_type" binding:"eq=|eq=live_photo|eq=version"`
-		EncryptionSupported []types.Algorithm `json:"encryption_supported"`
+		EncryptionSupported []types.Cipher    `json:"encryption_supported"`
 	}
 )
 

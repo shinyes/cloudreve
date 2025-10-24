@@ -161,13 +161,13 @@ type (
 		EncryptMetadata *EncryptMetadata `json:"encrypt_metadata,omitempty"`
 	}
 
-	Algorithm string
+	Cipher string
 
 	EncryptMetadata struct {
-		Algorithm    Algorithm `json:"algorithm"`
-		Key          []byte    `json:"key"`
-		KeyPlainText []byte    `json:"key_plain_text,omitempty"`
-		IV           []byte    `json:"iv"`
+		Algorithm    Cipher `json:"algorithm"`
+		Key          []byte `json:"key"`
+		KeyPlainText []byte `json:"key_plain_text,omitempty"`
+		IV           []byte `json:"iv"`
 	}
 
 	DavAccountProps struct {
@@ -361,5 +361,5 @@ const (
 )
 
 const (
-	AlgorithmAES256CTR Algorithm = "aes-256-ctr"
+	CipherAES256CTR Cipher = "aes-256-ctr"
 )

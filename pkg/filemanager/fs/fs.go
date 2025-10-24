@@ -294,7 +294,7 @@ type (
 		// with a default version entity. This will be set in update request for existing files.
 		EntityType          *types.EntityType
 		ExpireAt            time.Time
-		EncryptionSupported []types.Algorithm
+		EncryptionSupported []types.Cipher
 		ClientSideEncrypted bool // Whether the file stream is already encrypted by client side.
 	}
 

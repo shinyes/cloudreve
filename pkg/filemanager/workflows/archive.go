@@ -218,7 +218,7 @@ func (m *CreateArchiveTask) listEntitiesAndSendToSlave(ctx context.Context, dep 
 	user := inventory.UserFromContext(ctx)
 	fm := manager.NewFileManager(dep, user)
 	storagePolicyClient := dep.StoragePolicyClient()
-	masterKey, _ := dep.MasterEncryptKeyVault().GetMasterKey(ctx)
+	masterKey, _ := dep.MasterEncryptKeyVault(ctx).GetMasterKey(ctx)
 
 	failed, err := fm.CreateArchive(ctx, uris, io.Discard,
 		fs.WithDryRun(func(name string, e fs.Entity) {

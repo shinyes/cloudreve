@@ -131,9 +131,9 @@ type Dep interface {
 	// UAParser Get a singleton uaparser.Parser instance for user agent parsing.
 	UAParser() *uaparser.Parser
 	// MasterEncryptKeyVault Get a singleton encrypt.MasterEncryptKeyVault instance for master encrypt key vault.
-	MasterEncryptKeyVault() encrypt.MasterEncryptKeyVault
+	MasterEncryptKeyVault(ctx context.Context) encrypt.MasterEncryptKeyVault
 	// EncryptorFactory Get a new encrypt.CryptorFactory instance.
-	EncryptorFactory() encrypt.CryptorFactory
+	EncryptorFactory(ctx context.Context) encrypt.CryptorFactory
 }
 
 type dependency struct {
@@ -183,7 +183,6 @@ type dependency struct {
 	configPath        string
 	isPro             bool
 	requiredDbVersion string
-	licenseKey        string
 
 	// Protects inner deps that can be reloaded at runtime.
 	mu sync.Mutex
@@ -212,17 +211,17 @@ func (d *dependency) RequestClient(opts ...request.Option) request.Client {
 	return request.NewClient(d.ConfigProvider(), opts...)
 }
 
-func (d *dependency) MasterEncryptKeyVault() encrypt.MasterEncryptKeyVault {
+func (d *dependency) MasterEncryptKeyVault(ctx context.Context) encrypt.MasterEncryptKeyVault {
 	if d.masterEncryptKeyVault != nil {
 		return d.masterEncryptKeyVault
 	}
 
-	d.masterEncryptKeyVault = encrypt.NewMasterEncryptKeyVault(d.SettingProvider())
+	d.masterEncryptKeyVault = encrypt.NewMasterEncryptKeyVault(ctx, d.SettingProvider())
 	return d.masterEncryptKeyVault
 }
 
-func (d *dependency) EncryptorFactory() encrypt.CryptorFactory {
-	return encrypt.NewCryptorFactory(d.MasterEncryptKeyVault())
+func (d *dependency) EncryptorFactory(ctx context.Context) encrypt.CryptorFactory {
+	return encrypt.NewCryptorFactory(d.MasterEncryptKeyVault(ctx))
 }
 
 func (d *dependency) WebAuthn(ctx context.Context) (*webauthn.WebAuthn, error) {

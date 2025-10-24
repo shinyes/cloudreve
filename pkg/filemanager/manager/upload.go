@@ -192,7 +192,7 @@ func (m *manager) Upload(ctx context.Context, req *fs.UploadRequest, policy *ent
 	}
 
 	if session != nil && session.EncryptMetadata != nil && !req.Props.ClientSideEncrypted {
-		cryptor, err := m.dep.EncryptorFactory()(session.EncryptMetadata.Algorithm)
+		cryptor, err := m.dep.EncryptorFactory(ctx)(session.EncryptMetadata.Algorithm)
 		if err != nil {
 			return fmt.Errorf("failed to create cryptor: %w", err)
 		}
@@ -331,7 +331,7 @@ func (m *manager) Update(ctx context.Context, req *fs.UploadRequest, opts ...fs.
 
 	req.Props.UploadSessionID = uuid.Must(uuid.NewV4()).String()
 	// Sever side supported encryption algorithms
-	req.Props.EncryptionSupported = []types.Algorithm{types.AlgorithmAES256CTR}
+	req.Props.EncryptionSupported = []types.Cipher{types.CipherAES256CTR}
 
 	if m.stateless {
 		return m.updateStateless(ctx, req, o)

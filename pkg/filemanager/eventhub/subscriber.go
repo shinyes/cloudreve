@@ -169,7 +169,8 @@ func (s *subscriber) flushLocked(ctx context.Context) {
 	} else {
 		// TODO: implement event merging logic here
 		// For now, send all buffered events individually
-		for _, evt := range s.buffer {
+		debouncedEvents := DebounceEvents(s.buffer)
+		for _, evt := range debouncedEvents {
 			select {
 			case s.ch <- evt:
 			default:

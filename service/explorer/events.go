@@ -11,6 +11,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/pkg/logging"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
 )
 
 type (
@@ -44,6 +45,11 @@ func (s *ExplorerEventService) HandleExplorerEventsPush(c *gin.Context) error {
 	requestInfo := requestinfo.RequestInfoFromContext(c)
 	if requestInfo.ClientID == "" {
 		return serializer.NewError(serializer.CodeParamErr, "Client ID is required", nil)
+	}
+
+	// Client ID must be a valid UUID
+	if _, err := uuid.FromString(requestInfo.ClientID); err != nil {
+		return serializer.NewError(serializer.CodeParamErr, "Invalid client ID", err)
 	}
 
 	// Subscribe

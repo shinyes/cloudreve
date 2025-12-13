@@ -178,6 +178,8 @@ func (s *server) Close() {
 		defer cancel()
 	}
 
+	s.dep.EventHub().Close()
+
 	// Shutdown http server
 	if s.server != nil {
 		err := s.server.Shutdown(ctx)

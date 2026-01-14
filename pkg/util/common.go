@@ -2,7 +2,9 @@ package util
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"path"
 	"path/filepath"
@@ -30,6 +32,20 @@ func RandStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = RandomVariantAll[rand.Intn(len(RandomVariantAll))]
+	}
+	return string(b)
+}
+
+func RandStringRunesCrypto(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		num, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(int64(len(RandomVariantAll))))
+		if err != nil {
+			// fallback to math/rand on crypto failure
+			b[i] = RandomVariantAll[rand.Intn(len(RandomVariantAll))]
+		} else {
+			b[i] = RandomVariantAll[num.Int64()]
+		}
 	}
 	return string(b)
 }

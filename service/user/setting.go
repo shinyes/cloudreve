@@ -15,6 +15,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/ent"
 	"github.com/cloudreve/Cloudreve/v4/inventory"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
+	"github.com/cloudreve/Cloudreve/v4/pkg/auth"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 	"github.com/cloudreve/Cloudreve/v4/pkg/request"
 	"github.com/cloudreve/Cloudreve/v4/pkg/serializer"
@@ -275,6 +276,10 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	}
 
 	if s.CurrentPassword != nil && s.NewPassword != nil {
+		if err := auth.CheckScope(c, types.ScopeUserSecurityInfoWrite); err != nil {
+			return err
+		}
+
 		if err := inventory.CheckPassword(u, *s.CurrentPassword); err != nil {
 			return serializer.NewError(serializer.CodeIncorrectPassword, "Incorrect password", err)
 		}
@@ -285,6 +290,10 @@ func (s *PatchUserSetting) Patch(c *gin.Context) error {
 	}
 
 	if s.TwoFAEnabled != nil {
+		if err := auth.CheckScope(c, types.ScopeUserSecurityInfoWrite); err != nil {
+			return err
+		}
+
 		if *s.TwoFAEnabled {
 			kv := dep.KV()
 			secret, ok := kv.Get(fmt.Sprintf("%s%d", twoFaEnableSessionKey, u.ID))

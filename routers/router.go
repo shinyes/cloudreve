@@ -19,6 +19,7 @@ import (
 	"github.com/cloudreve/Cloudreve/v4/service/basic"
 	"github.com/cloudreve/Cloudreve/v4/service/explorer"
 	"github.com/cloudreve/Cloudreve/v4/service/node"
+	"github.com/cloudreve/Cloudreve/v4/service/oauth"
 	"github.com/cloudreve/Cloudreve/v4/service/setting"
 	sharesvc "github.com/cloudreve/Cloudreve/v4/service/share"
 	usersvc "github.com/cloudreve/Cloudreve/v4/service/user"
@@ -299,6 +300,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.UserIssueToken,
 				)
 				token.POST("refresh",
+					middleware.RequiredScopes(types.ScopeOfflineAccess),
 					controllers.FromJSON[usersvc.RefreshTokenService](usersvc.RefreshTokenParameterCtx{}),
 					controllers.UserRefreshToken,
 				)
@@ -313,6 +315,27 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[usersvc.PrepareLoginService](usersvc.PrepareLoginParameterCtx{}),
 				controllers.UserPrepareLogin,
 			)
+
+			oauthRouter := session.Group("oauth")
+			{
+				oauthRouter.GET("app/:app_id",
+					controllers.FromUri[oauth.GetAppRegistrationService](oauth.GetAppRegistrationParamCtx{}),
+					controllers.GetAppRegistration,
+				)
+				oauthRouter.POST("consent",
+					middleware.Logging(),
+					controllers.FromJSON[oauth.GrantService](oauth.GrantParamCtx{}),
+					controllers.GrantAppConsent,
+				)
+				oauthRouter.POST("token",
+					controllers.FromForm[oauth.ExchangeTokenService](oauth.ExchangeTokenParamCtx{}),
+					controllers.ExchangeToken,
+				)
+				oauthRouter.GET("userinfo",
+					controllers.FromQuery[oauth.UserInfoService](oauth.UserInfoParamCtx{}),
+					controllers.OpenIDUserInfo,
+				)
+			}
 
 			authn := session.Group("authn")
 			{
@@ -516,6 +539,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		// Workflows
 		wf := v4.Group("workflow")
 		wf.Use(middleware.LoginRequired())
+		wf.Use(middleware.RequiredScopes(types.ScopeWorkflowRead))
 		{
 			// List
 			wf.GET("",
@@ -529,11 +553,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// Create task to create an archive file
 			wf.POST("archive",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
 				controllers.FromJSON[explorer.ArchiveWorkflowService](explorer.CreateArchiveParamCtx{}),
 				controllers.CreateArchive,
 			)
 			// Create task to extract an archive file
 			wf.POST("extract",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
 				controllers.FromJSON[explorer.ArchiveWorkflowService](explorer.CreateArchiveParamCtx{}),
 				controllers.ExtractArchive,
 			)
@@ -542,16 +568,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			{
 				// Create task to download a file
 				remoteDownload.POST("",
+					middleware.RequiredScopes(types.ScopeWorkflowWrite),
 					controllers.FromJSON[explorer.DownloadWorkflowService](explorer.CreateDownloadParamCtx{}),
 					controllers.CreateRemoteDownload,
 				)
 				// Set download target
 				remoteDownload.PATCH(":id",
+					middleware.RequiredScopes(types.ScopeWorkflowWrite),
 					middleware.HashID(hashid.TaskID),
 					controllers.FromJSON[explorer.SetDownloadFilesService](explorer.SetDownloadFilesParamCtx{}),
 					controllers.SetDownloadTaskTarget,
 				)
 				remoteDownload.DELETE(":id",
+					middleware.RequiredScopes(types.ScopeWorkflowWrite),
 					middleware.HashID(hashid.TaskID),
 					controllers.CancelDownloadTask,
 				)
@@ -560,6 +589,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 
 		// 文件
 		file := v4.Group("file")
+		file.Use(middleware.RequiredScopes(types.ScopeFilesRead))
 		{
 			// List files
 			file.GET("",
@@ -572,16 +602,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// Create file
 			file.POST("create",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.CreateFileService](explorer.CreateFileParameterCtx{}),
 				controllers.CreateFile,
 			)
 			// Rename file
 			file.POST("rename",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.RenameFileService](explorer.RenameFileParameterCtx{}),
 				controllers.RenameFile,
 			)
 			// Move or copy files
 			file.POST("move",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.MoveFileService](explorer.MoveFileParameterCtx{}),
 				middleware.ValidateBatchFileCount(dep, explorer.MoveFileParameterCtx{}),
 				controllers.MoveFile)
@@ -594,6 +627,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// Update file content
 			file.PUT("content",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromQuery[explorer.FileUpdateService](explorer.FileUpdateParameterCtx{}),
 				controllers.PutContent)
 			// Get entity content for preview/download
@@ -626,29 +660,33 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			)
 			// Delete files
 			file.DELETE("",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.DeleteFileService](explorer.DeleteFileParameterCtx{}),
 				middleware.ValidateBatchFileCount(dep, explorer.DeleteFileParameterCtx{}),
 				controllers.Delete,
 			)
 			// Force unlock
 			file.DELETE("lock",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.UnlockFileService](explorer.UnlockFileParameterCtx{}),
 				controllers.Unlock,
 			)
 			// Restore files
 			file.POST("restore",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.DeleteFileService](explorer.DeleteFileParameterCtx{}),
 				middleware.ValidateBatchFileCount(dep, explorer.DeleteFileParameterCtx{}),
 				controllers.Restore,
 			)
 			// Patch metadata
 			file.PATCH("metadata",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.PatchMetadataService](explorer.PatchMetadataParameterCtx{}),
 				middleware.ValidateBatchFileCount(dep, explorer.PatchMetadataParameterCtx{}),
 				controllers.PatchMetadata,
 			)
 			// Upload related
-			upload := file.Group("upload")
+			upload := file.Group("upload", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
 				// Create upload session
 				upload.PUT("",
@@ -666,7 +704,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 			}
 			// Pin file
-			pin := file.Group("pin")
+			pin := file.Group("pin", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
 				// Pin file
 				pin.PUT("",
@@ -685,7 +723,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.GetFileInfo,
 			)
 			// Version management
-			version := file.Group("version")
+			version := file.Group("version", middleware.RequiredScopes(types.ScopeFilesWrite))
 			{
 				// Set current version
 				version.POST("current",
@@ -699,12 +737,14 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				)
 			}
 			file.PUT("viewerSession",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.CreateViewerSessionService](explorer.CreateViewerSessionParamCtx{}),
 				controllers.CreateViewerSession,
 			)
 			// Create task to import files
 			wf.POST("import",
 				middleware.IsAdmin(),
+				middleware.RequiredScopes(types.ScopeWorkflowWrite, types.ScopeAdminWrite),
 				controllers.FromJSON[explorer.ImportWorkflowService](explorer.CreateImportParamCtx{}),
 				controllers.ImportFiles,
 			)
@@ -724,6 +764,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			}
 			// Patch view
 			file.PATCH("view",
+				middleware.RequiredScopes(types.ScopeFilesWrite),
 				controllers.FromJSON[explorer.PatchViewService](explorer.PatchViewParameterCtx{}),
 				controllers.PatchView,
 			)
@@ -738,16 +779,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 
 		// 分享相关
 		share := v4.Group("share")
+		share.Use(middleware.RequiredScopes(types.ScopeSharesRead))
 		{
 			// Create share link
 			share.PUT("",
 				middleware.LoginRequired(),
+				middleware.RequiredScopes(types.ScopeSharesWrite),
 				controllers.FromJSON[sharesvc.ShareCreateService](sharesvc.ShareCreateParamCtx{}),
 				controllers.CreateShare,
 			)
 			// Edit existing share link
 			share.POST(":id",
 				middleware.LoginRequired(),
+				middleware.RequiredScopes(types.ScopeSharesWrite),
 				middleware.HashID(hashid.ShareID),
 				controllers.FromJSON[sharesvc.ShareCreateService](sharesvc.ShareCreateParamCtx{}),
 				controllers.EditShare,
@@ -767,6 +811,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			// 删除分享
 			share.DELETE(":id",
 				middleware.LoginRequired(),
+				middleware.RequiredScopes(types.ScopeSharesWrite),
 				middleware.HashID(hashid.ShareID),
 				controllers.DeleteShare,
 			)
@@ -785,6 +830,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		// 需要登录保护的
 		auth := v4.Group("")
 		auth.Use(middleware.LoginRequired())
+		auth.Use(middleware.RequiredScopes(types.ScopeAdminRead))
 		{
 			// 管理
 			admin := auth.Group("admin", middleware.IsAdmin())
@@ -803,6 +849,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// Patch settings
 					settings.PATCH("",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.SetSettingService](adminsvc.SetSettingParamCtx{}),
 						controllers.AdminSetSettings,
 					)
@@ -823,16 +870,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 创建用户组
 					group.PUT("",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertGroupService](adminsvc.UpsertGroupParamCtx{}),
 						controllers.AdminCreateGroup,
 					)
 					// 更新用户组
 					group.PUT(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertGroupService](adminsvc.UpsertGroupParamCtx{}),
 						controllers.AdminUpdateGroup,
 					)
 					// 删除用户组
 					group.DELETE(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromUri[adminsvc.SingleGroupService](adminsvc.SingleGroupParamCtx{}),
 						controllers.AdminDeleteGroup,
 					)
@@ -852,6 +902,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.AdminSendTestMail,
 					)
 					tool.DELETE("entityUrlCache",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.AdminClearEntityUrlCache,
 					)
 				}
@@ -871,11 +922,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// Batch delete task
 					queue.POST("batch/delete",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.BatchTaskService](adminsvc.BatchTaskParamCtx{}),
 						controllers.AdminBatchDeleteTask,
 					)
 					// Cleanup tasks
 					queue.POST("cleanup",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.CleanupTaskService](adminsvc.CleanupTaskParameterCtx{}),
 						controllers.AdminCleanupTask,
 					)
@@ -900,16 +953,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 创建存储策略
 					policy.PUT("",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.CreateStoragePolicyService](adminsvc.CreateStoragePolicyParamCtx{}),
 						controllers.AdminCreatePolicy,
 					)
 					// 更新存储策略
 					policy.PUT(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpdateStoragePolicyService](adminsvc.UpdateStoragePolicyParamCtx{}),
 						controllers.AdminUpdatePolicy,
 					)
 					// 创建跨域策略
 					policy.POST("cors",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.CreateStoragePolicyCorsService](adminsvc.CreateStoragePolicyCorsParamCtx{}),
 						controllers.AdminCreateStoragePolicyCors,
 					)
@@ -928,6 +984,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 							controllers.AdminGetPolicyOAuthStatus,
 						)
 						oauth.POST("callback",
+							middleware.RequiredScopes(types.ScopeAdminWrite),
 							controllers.FromJSON[adminsvc.FinishOauthCallbackService](adminsvc.FinishOauthCallbackParamCtx{}),
 							controllers.AdminFinishOauthCallback,
 						)
@@ -941,6 +998,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					// policy.GET(":id", controllers.AdminGetPolicy)
 					// 删除 存储策略
 					policy.DELETE(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromUri[adminsvc.SingleStoragePolicyService](adminsvc.GetStoragePolicyParamCtx{}),
 						controllers.AdminDeletePolicy,
 					)
@@ -965,14 +1023,17 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.AdminTestDownloader,
 					)
 					node.PUT("",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertNodeService](adminsvc.UpsertNodeParamCtx{}),
 						controllers.AdminCreateNode,
 					)
 					node.PUT(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertNodeService](adminsvc.UpsertNodeParamCtx{}),
 						controllers.AdminUpdateNode,
 					)
 					node.DELETE(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromUri[adminsvc.SingleNodeService](adminsvc.SingleNodeParamCtx{}),
 						controllers.AdminDeleteNode,
 					)
@@ -992,11 +1053,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 更新用户
 					user.PUT(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertUserService](adminsvc.UpsertUserParamCtx{}),
 						controllers.AdminUpdateUser,
 					)
 					// 创建用户
 					user.PUT("",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertUserService](adminsvc.UpsertUserParamCtx{}),
 						controllers.AdminCreateUser,
 					)
@@ -1004,11 +1067,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					{
 						// 批量删除用户
 						batch.POST("delete",
+							middleware.RequiredScopes(types.ScopeAdminWrite),
 							controllers.FromJSON[adminsvc.BatchUserService](adminsvc.BatchUserParamCtx{}),
 							controllers.AdminDeleteUser,
 						)
 					}
 					user.POST(":id/calibrate",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromUri[adminsvc.SingleUserService](adminsvc.SingleUserParamCtx{}),
 						controllers.AdminCalibrateStorage,
 					)
@@ -1028,6 +1093,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 更新文件
 					file.PUT(":id",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.UpsertFileService](adminsvc.UpsertFileParamCtx{}),
 						controllers.AdminUpdateFile,
 					)
@@ -1038,6 +1104,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// 批量删除文件
 					file.POST("batch/delete",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.BatchFileService](adminsvc.BatchFileParamCtx{}),
 						controllers.AdminBatchDeleteFile,
 					)
@@ -1057,6 +1124,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// Batch delete entity
 					entity.POST("batch/delete",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.BatchEntityService](adminsvc.BatchEntityParamCtx{}),
 						controllers.AdminBatchDeleteEntity,
 					)
@@ -1081,6 +1149,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// Batch delete shares
 					share.POST("batch/delete",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.BatchShareService](adminsvc.BatchShareParamCtx{}),
 						controllers.AdminBatchDeleteShare,
 					)
@@ -1091,17 +1160,19 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			user := auth.Group("user")
 			{
 				// 当前登录用户信息
-				user.GET("me", controllers.UserMe)
+				user.GET("me", middleware.RequiredScopes(types.ScopeUserInfoRead), controllers.UserMe)
 				// 存储信息
-				user.GET("capacity", controllers.UserStorage)
+				user.GET("capacity", middleware.RequiredScopes(types.ScopeUserInfoRead), controllers.UserStorage)
 				// Search user by keywords
 				user.GET("search",
+					middleware.RequiredScopes(types.ScopeUserInfoRead),
 					controllers.FromQuery[usersvc.SearchUserService](usersvc.SearchUserParamCtx{}),
 					controllers.UserSearch,
 				)
 
 				// WebAuthn 注册相关
 				authn := user.Group("authn",
+					middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
 					middleware.IsFunctionEnabled(func(c *gin.Context) bool {
 						return dep.SettingProvider().AuthnEnabled(c)
 					}))
@@ -1119,13 +1190,15 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 
 				// 用户设置
 				setting := user.Group("setting")
+				setting.Use(middleware.RequiredScopes(types.ScopeUserInfoRead))
 				{
 					// 获取当前用户设定
 					setting.GET("", controllers.UserSetting)
 					// 从文件上传头像
-					setting.PUT("avatar", controllers.UploadAvatar)
+					setting.PUT("avatar", middleware.RequiredScopes(types.ScopeUserInfoWrite), controllers.UploadAvatar)
 					// 更改用户设定
 					setting.PATCH("",
+						middleware.RequiredScopes(types.ScopeUserInfoWrite),
 						controllers.FromJSON[usersvc.PatchUserSetting](usersvc.PatchUserSettingParamsCtx{}),
 						controllers.UpdateOption,
 					)
@@ -1136,6 +1209,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 
 			// WebDAV and devices
 			devices := auth.Group("devices")
+			devices.Use(middleware.RequiredScopes(types.ScopeDavAccountRead))
 			{
 				dav := devices.Group("dav")
 				{
@@ -1146,17 +1220,20 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					)
 					// Create WebDAV account
 					dav.PUT("",
+						middleware.RequiredScopes(types.ScopeDavAccountWrite),
 						controllers.FromJSON[setting.CreateDavAccountService](setting.CreateDavAccountParamCtx{}),
 						controllers.CreateDAVAccounts,
 					)
 					// Create WebDAV account
 					dav.PATCH(":id",
+						middleware.RequiredScopes(types.ScopeDavAccountWrite),
 						middleware.HashID(hashid.DavAccountID),
 						controllers.FromJSON[setting.CreateDavAccountService](setting.CreateDavAccountParamCtx{}),
 						controllers.UpdateDAVAccounts,
 					)
 					// Delete WebDAV account
 					dav.DELETE(":id",
+						middleware.RequiredScopes(types.ScopeDavAccountWrite),
 						middleware.HashID(hashid.DavAccountID),
 						controllers.DeleteDAVAccounts,
 					)

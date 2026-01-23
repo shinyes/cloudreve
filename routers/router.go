@@ -243,7 +243,9 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 	{
 		// Redirect file source link
 		source := r.Group("f")
+		source.Use(middleware.ContentCORS())
 		{
+			source.OPTIONS("*option", middleware.ContentCORS())
 			source.GET(":id/:name",
 				middleware.HashID(hashid.SourceLinkID),
 				controllers.AnonymousPermLink(false))
@@ -632,12 +634,9 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.PutContent)
 			// Get entity content for preview/download
 			content := file.Group("content")
-			contentCors := cors.New(cors.Config{
-				AllowOrigins: []string{"*"},
-			})
-			content.Use(contentCors)
+			content.Use(middleware.ContentCORS())
 			{
-				content.OPTIONS("*option", contentCors)
+				content.OPTIONS("*option", middleware.ContentCORS())
 				content.GET(":id/:speed/:name",
 					middleware.SignRequired(dep.GeneralAuth()),
 					middleware.HashID(hashid.EntityID),

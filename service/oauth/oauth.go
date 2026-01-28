@@ -246,13 +246,6 @@ func (s *DeleteOAuthGrantService) Delete(c *gin.Context) error {
 		return serializer.NewError(serializer.CodeNotFound, "OAuth grant not found", nil)
 	}
 
-	dep.AuditRecorder().Record(c, &types.LogEntry{
-		Category: types.AuditLogTypeOAuthGrantRevoke,
-		Exts: map[string]string{
-			"client_id": s.AppID,
-		},
-	})
-
 	return nil
 }
 

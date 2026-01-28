@@ -319,7 +319,8 @@ func (s *settingProvider) FileViewers(ctx context.Context) []types.ViewerGroup {
 
 func (s *settingProvider) AppSetting(ctx context.Context) *AppSetting {
 	return &AppSetting{
-		Promotion: s.getBoolean(ctx, "show_app_promotion", false),
+		Promotion:        s.getBoolean(ctx, "show_app_promotion", false),
+		DesktopPromotion: s.getBoolean(ctx, "show_desktop_app_promotion", false),
 	}
 }
 

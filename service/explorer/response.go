@@ -310,7 +310,6 @@ type Share struct {
 	Expired           bool            `json:"expired"`
 	Url               string          `json:"url"`
 	ShowReadMe        bool            `json:"show_readme,omitempty"`
-	Size              int64           `json:"size"`
 
 	// Only viewable by owner
 	IsPrivate bool   `json:"is_private,omitempty"`
@@ -346,10 +345,6 @@ func BuildShare(s *ent.Share, base *url.URL, hasher hashid.Encoder, requester *e
 		res.Expires = s.Expires
 		res.Password = s.Password
 		res.ShowReadMe = s.Props != nil && s.Props.ShowReadMe
-
-		if t == types.FileTypeFile && s.Edges.File != nil {
-			res.Size = s.Edges.File.Size
-		}
 	}
 
 	if requester.ID == owner.ID {

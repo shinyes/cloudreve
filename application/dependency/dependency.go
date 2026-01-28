@@ -491,7 +491,7 @@ func (d *dependency) OAuthClientClient() inventory.OAuthClientClient {
 		return d.oAuthClient
 	}
 
-	return inventory.NewOAuthClientClient(d.DBClient())
+	return inventory.NewOAuthClientClient(d.DBClient(), d.ConfigProvider().Database().Type)
 }
 
 func (d *dependency) MimeDetector(ctx context.Context) mime.MimeDetector {

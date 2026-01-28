@@ -778,6 +778,9 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 			// Server event push
 			file.GET("events",
 				middleware.LoginRequired(),
+				middleware.IsFunctionEnabled(func(c *gin.Context) bool {
+					return dep.SettingProvider().EventHubEnabled(c)
+				}),
 				controllers.FromQuery[explorer.ExplorerEventService](explorer.ExplorerEventParamCtx{}),
 				controllers.HandleExplorerEventsPush,
 			)

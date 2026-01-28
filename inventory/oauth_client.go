@@ -26,6 +26,9 @@ type (
 		UpsertGrant(ctx context.Context, userID, clientID int, scopes []string) error
 		// UpdateGrantLastUsedAt updates the last used at for an OAuth grant for a user and client.
 		UpdateGrantLastUsedAt(ctx context.Context, userID, clientID int) error
+		// DeleteGrantByUserAndClientGUID deletes an OAuth grant for a user by the client GUID.
+		// Returns true if the grant was deleted, false if it was not found.
+		DeleteGrantByUserAndClientGUID(ctx context.Context, userID int, clientGUID string) (bool, error)
 		// List returns a paginated list of OAuth clients.
 		List(ctx context.Context, args *ListOAuthClientArgs) (*ListOAuthClientResult, error)
 		// GetByID returns the OAuth client by its ID.
@@ -38,6 +41,8 @@ type (
 		Delete(ctx context.Context, id int) error
 		// CountGrants returns the number of grants for an OAuth client.
 		CountGrants(ctx context.Context, id int) (int, error)
+		// GetGrantsByUserID returns the OAuth grants for a user.
+		GetGrantsByUserID(ctx context.Context, userID int) ([]*ent.OAuthGrant, error)
 	}
 
 	ListOAuthClientArgs struct {
@@ -50,6 +55,8 @@ type (
 		*PaginationResults
 		Clients []*ent.OAuthClient
 	}
+
+	LoadOAuthGrantClient struct{}
 )
 
 func NewOAuthClientClient(client *ent.Client, dbType conf.DBType) OAuthClientClient {
@@ -109,6 +116,35 @@ func (c *oauthClientClient) UpdateGrantLastUsedAt(ctx context.Context, userID, c
 		Where(oauthgrant.UserID(userID), oauthgrant.ClientID(clientID)).
 		SetLastUsedAt(time.Now()).
 		Exec(ctx)
+}
+
+func (c *oauthClientClient) GetGrantsByUserID(ctx context.Context, userID int) ([]*ent.OAuthGrant, error) {
+	return withOAuthGrantEagerLoadings(ctx, c.client.OAuthGrant.Query()).
+		Where(oauthgrant.UserID(userID)).
+		All(ctx)
+}
+
+func (c *oauthClientClient) DeleteGrantByUserAndClientGUID(ctx context.Context, userID int, clientGUID string) (bool, error) {
+	// First, get the client by GUID to get its ID
+	client, err := c.client.OAuthClient.Query().
+		Where(oauthclient.GUID(clientGUID)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get OAuth client: %w", err)
+	}
+
+	// Delete the grant for this user and client
+	deleted, err := c.client.OAuthGrant.Delete().
+		Where(oauthgrant.UserID(userID), oauthgrant.ClientID(client.ID)).
+		Exec(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete OAuth grant: %w", err)
+	}
+
+	return deleted > 0, nil
 }
 
 func (c *oauthClientClient) List(ctx context.Context, args *ListOAuthClientArgs) (*ListOAuthClientResult, error) {
@@ -232,4 +268,13 @@ func getOAuthClientOrderOption(args *ListOAuthClientArgs) []oauthclient.OrderOpt
 	default:
 		return []oauthclient.OrderOption{oauthclient.ByID(orderTerm)}
 	}
+}
+
+func withOAuthGrantEagerLoadings(ctx context.Context, q *ent.OAuthGrantQuery) *ent.OAuthGrantQuery {
+	if v, ok := ctx.Value(LoadOAuthGrantClient{}).(bool); ok && v {
+		q.WithClient(func(ocq *ent.OAuthClientQuery) {
+		})
+	}
+
+	return q
 }

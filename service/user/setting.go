@@ -131,7 +131,13 @@ func GetUserSettings(c *gin.Context) (*UserSettings, error) {
 		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user passkey", err)
 	}
 
-	return BuildUserSettings(u, passkeys, dep.UAParser()), nil
+	ctx := context.WithValue(c, inventory.LoadOAuthGrantClient{}, true)
+	grants, err := dep.OAuthClientClient().GetGrantsByUserID(ctx, u.ID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get user OAuth grants", err)
+	}
+
+	return BuildUserSettings(u, passkeys, dep.UAParser(), grants), nil
 
 	// 用户组有效期
 

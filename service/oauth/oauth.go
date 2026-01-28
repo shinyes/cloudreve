@@ -225,6 +225,38 @@ func (s *ExchangeTokenService) Exchange(c *gin.Context) (*TokenResponse, error) 
 }
 
 type (
+	DeleteOAuthGrantParamCtx struct{}
+	DeleteOAuthGrantService  struct {
+		AppID string `uri:"app_id" binding:"required"`
+	}
+)
+
+func (s *DeleteOAuthGrantService) Delete(c *gin.Context) error {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	oAuthClient := dep.OAuthClientClient()
+
+	// Delete the grant - the method validates that the grant belongs to the current user
+	deleted, err := oAuthClient.DeleteGrantByUserAndClientGUID(c, user.ID, s.AppID)
+	if err != nil {
+		return serializer.NewError(serializer.CodeDBError, "Failed to delete OAuth grant", err)
+	}
+
+	if !deleted {
+		return serializer.NewError(serializer.CodeNotFound, "OAuth grant not found", nil)
+	}
+
+	dep.AuditRecorder().Record(c, &types.LogEntry{
+		Category: types.AuditLogTypeOAuthGrantRevoke,
+		Exts: map[string]string{
+			"client_id": s.AppID,
+		},
+	})
+
+	return nil
+}
+
+type (
 	UserInfoParamCtx struct{}
 	UserInfoService  struct{}
 )

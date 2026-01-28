@@ -66,3 +66,15 @@ func OpenIDUserInfo(c *gin.Context) {
 
 	c.JSON(200, res)
 }
+
+func DeleteOAuthGrant(c *gin.Context) {
+	service := ParametersFromContext[*oauth.DeleteOAuthGrantService](c, oauth.DeleteOAuthGrantParamCtx{})
+	err := service.Delete(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}

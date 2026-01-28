@@ -338,6 +338,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					controllers.FromQuery[oauth.UserInfoService](oauth.UserInfoParamCtx{}),
 					controllers.OpenIDUserInfo,
 				)
+				oauthRouter.DELETE("grant/:app_id",
+					middleware.LoginRequired(),
+					middleware.RequiredScopes(types.ScopeUserSecurityInfoWrite),
+					controllers.FromUri[oauth.DeleteOAuthGrantService](oauth.DeleteOAuthGrantParamCtx{}),
+					controllers.DeleteOAuthGrant,
+				)
 			}
 
 			authn := session.Group("authn")

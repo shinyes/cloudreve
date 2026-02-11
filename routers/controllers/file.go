@@ -436,3 +436,17 @@ func HandleExplorerEventsPush(c *gin.Context) {
 		return
 	}
 }
+
+func FulltextSearch(c *gin.Context) {
+	service := ParametersFromContext[*explorer.FulltextSearchService](c, explorer.FulltextSearchParamCtx{})
+	resp, err := service.Search(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}

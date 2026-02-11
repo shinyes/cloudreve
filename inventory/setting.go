@@ -672,6 +672,19 @@ var DefaultSettings = map[string]string{
 	"fs_event_push_enabled":                      "1",
 	"fs_event_push_max_age":                      "1209600",
 	"fs_event_push_debounce":                     "5",
+	"fts_enabled":                                "0",
+	"fts_index_type":                             "",
+	"fts_extractor_type":                         "",
+	"fts_meilisearch_endpoint":                   "",
+	"fts_meilisearch_api_key":                    "",
+	"fts_meilisearch_page_size":                  "5",
+	"fts_meilisearch_embed_enabled":              "0",
+	"fts_meilisearch_embed_config":               "{}",
+	"fts_tika_endpoint":                          "",
+	"fts_tika_max_response_size":                 "10485760",
+	"fts_tika_exts":                              "pdf,doc,docx,xls,xlsx,ppt,pptx,odt,ods,odp,rtf,txt,md,html,htm,epub,csv",
+	"fts_tika_max_file_size":                     "26214400",
+	"fts_chunk_size":                             "2000",
 }
 
 var RedactedSettings = map[string]struct{}{

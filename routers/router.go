@@ -785,6 +785,16 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromQuery[explorer.ExplorerEventService](explorer.ExplorerEventParamCtx{}),
 				controllers.HandleExplorerEventsPush,
 			)
+
+			// Full text search
+			file.GET("search",
+				middleware.LoginRequired(),
+				middleware.IsFunctionEnabled(func(c *gin.Context) bool {
+					return dep.SettingProvider().FTSEnabled(c)
+				}),
+				controllers.FromQuery[explorer.FulltextSearchService](explorer.FulltextSearchParamCtx{}),
+				controllers.FulltextSearch,
+			)
 		}
 
 		// 分享相关

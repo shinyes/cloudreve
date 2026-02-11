@@ -139,6 +139,12 @@ type (
 		ParentFiles              []int
 		PrimaryEntityParentFiles []int
 	}
+
+	CopyParameter struct {
+		Files                []*ent.File
+		DstMap               map[int][]*ent.File
+		ExcludedMetadataKeys []string
+	}
 )
 
 type FileClient interface {
@@ -187,7 +193,7 @@ type FileClient interface {
 	// UpsertMetadata update or insert metadata
 	UpsertMetadata(ctx context.Context, file *ent.File, data map[string]string, privateMask map[string]bool) error
 	// Copy copies a layer of file to its corresponding destination folder. dstMap is a map from src parent ID to dst parent Files.
-	Copy(ctx context.Context, files []*ent.File, dstMap map[int][]*ent.File) (map[int][]*ent.File, StorageDiff, error)
+	Copy(ctx context.Context, args *CopyParameter) (map[int][]*ent.File, StorageDiff, error)
 	// Delete deletes a group of files (and related models) with given entity recycle option
 	Delete(ctx context.Context, files []*ent.File, options *types.EntityProps) ([]*ent.Entity, StorageDiff, error)
 	// StaleEntities returns stale entities of a given file. If ID is not provided, all entities
@@ -562,7 +568,9 @@ func (f *fileClient) Delete(ctx context.Context, files []*ent.File, options *typ
 	return toBeRecycled, storageReduced, nil
 }
 
-func (f *fileClient) Copy(ctx context.Context, files []*ent.File, dstMap map[int][]*ent.File) (map[int][]*ent.File, StorageDiff, error) {
+func (f *fileClient) Copy(ctx context.Context, args *CopyParameter) (map[int][]*ent.File, StorageDiff, error) {
+	files := args.Files
+	dstMap := args.DstMap
 	pageSize := capPageSize(f.maxSQlParam, intsets.MaxInt, 10)
 	// 1. Copy files and metadata
 	copyFileStm := lo.Map(files, func(file *ent.File, index int) *ent.FileCreate {
@@ -603,12 +611,15 @@ func (f *fileClient) Copy(ctx context.Context, files []*ent.File, dstMap map[int
 			return nil, nil, fmt.Errorf("failed to get metadata of file: %w", err)
 		}
 
-		metadataStm = append(metadataStm, lo.Map(fileMetadata, func(metadata *ent.Metadata, index int) *ent.MetadataCreate {
+		metadataStm = append(metadataStm, lo.FilterMap(fileMetadata, func(metadata *ent.Metadata, index int) (*ent.MetadataCreate, bool) {
+			if lo.Contains(args.ExcludedMetadataKeys, metadata.Name) {
+				return nil, false
+			}
 			return f.client.Metadata.Create().
 				SetName(metadata.Name).
 				SetValue(metadata.Value).
 				SetFile(newFile).
-				SetIsPublic(metadata.IsPublic)
+				SetIsPublic(metadata.IsPublic), true
 		})...)
 
 		fileEntities, err := files[index].Edges.EntitiesOrErr()

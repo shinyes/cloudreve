@@ -636,10 +636,9 @@ func (s *settingProvider) FTSIndexMeilisearch(ctx context.Context) *FTSIndexMeil
 
 func (s *settingProvider) FTSTikaExtractor(ctx context.Context) *FTSTikaExtractorSetting {
 	return &FTSTikaExtractorSetting{
-		Endpoint:        s.getString(ctx, "fts_tika_endpoint", ""),
-		MaxResponseSize: s.getInt64(ctx, "fts_tika_max_response_size", 10485760),
-		Exts:            s.getStringList(ctx, "fts_tika_exts", []string{}),
-		MaxFileSize:     s.getInt64(ctx, "fts_tika_max_file_size_remote", 52428800),
+		Endpoint:    s.getString(ctx, "fts_tika_endpoint", ""),
+		Exts:        s.getStringList(ctx, "fts_tika_exts", []string{}),
+		MaxFileSize: s.getInt64(ctx, "fts_tika_max_file_size_remote", 52428800),
 	}
 }
 

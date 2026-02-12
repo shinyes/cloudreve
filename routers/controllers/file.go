@@ -68,6 +68,21 @@ func CreateRemoteDownload(c *gin.Context) {
 	}
 }
 
+// RebuildFTSIndex rebuilds full text search index for files
+func RebuildFTSIndex(c *gin.Context) {
+	service := ParametersFromContext[*explorer.RebuildFTSIndexWorkflowService](c, explorer.CreateRebuildFTSIndexParamCtx{})
+	resp, err := service.CreateRebuildFTSIndexTask(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{
+		Data: resp,
+	})
+}
+
 // ExtractArchive creates extract archive task
 func ExtractArchive(c *gin.Context) {
 	service := ParametersFromContext[*explorer.ArchiveWorkflowService](c, explorer.CreateArchiveParamCtx{})

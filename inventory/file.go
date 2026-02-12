@@ -209,6 +209,11 @@ type FileClient interface {
 	UnlinkEntity(ctx context.Context, entity *ent.Entity, file *ent.File, owner *ent.User) (StorageDiff, error)
 	// CreateDirectLink creates a direct link for a file
 	CreateDirectLink(ctx context.Context, fileID int, name string, speed int, reuse bool) (*ent.DirectLink, error)
+	// CountIndexableFiles counts files suitable for FTS indexing (non-empty name, has parent, is file type).
+	CountIndexableFiles(ctx context.Context) (int, error)
+	// ListIndexableFiles lists files suitable for FTS indexing, returning up to limit files
+	// with ID strictly greater than afterID. Use afterID=0 to start from the beginning.
+	ListIndexableFiles(ctx context.Context, afterID, limit int) ([]*ent.File, error)
 	// CountByTimeRange counts files created in a given time range
 	CountByTimeRange(ctx context.Context, start, end *time.Time) (int, error)
 	// CountEntityByTimeRange counts entities created in a given time range
@@ -229,6 +234,8 @@ type FileClient interface {
 	UpdateProps(ctx context.Context, file *ent.File, props *types.FileProps) (*ent.File, error)
 	// UpdateModifiedAt updates modified at of a file
 	UpdateModifiedAt(ctx context.Context, file *ent.File, modifiedAt time.Time) error
+	// DeleteAllMetadataByName deletes all metadata by a given name
+	DeleteAllMetadataByName(ctx context.Context, name string) error
 }
 
 func NewFileClient(client *ent.Client, dbType conf.DBType, hasher hashid.Encoder) FileClient {
@@ -312,6 +319,36 @@ func (f *fileClient) CountByTimeRange(ctx context.Context, start, end *time.Time
 	}
 
 	return f.client.File.Query().Where(file.CreatedAtGTE(*start), file.CreatedAtLT(*end)).Count(ctx)
+}
+
+func (f *fileClient) DeleteAllMetadataByName(ctx context.Context, name string) error {
+	_, err := f.client.Metadata.Delete().Where(metadata.Name(name)).Exec(schema.SkipSoftDelete(ctx))
+	if err != nil {
+		return fmt.Errorf("failed to delete metadata: %w", err)
+	}
+
+	return nil
+}
+
+func (f *fileClient) CountIndexableFiles(ctx context.Context) (int, error) {
+	return f.indexableFilesQuery().Count(ctx)
+}
+
+func (f *fileClient) ListIndexableFiles(ctx context.Context, afterID, limit int) ([]*ent.File, error) {
+	q := f.indexableFilesQuery()
+	if afterID > 0 {
+		q = q.Where(file.IDGT(afterID))
+	}
+	return q.Limit(limit).All(ctx)
+}
+
+func (f *fileClient) indexableFilesQuery() *ent.FileQuery {
+	return f.client.File.Query().Where(
+		file.Type(int(types.FileTypeFile)),
+		file.NameNEQ(""),
+		file.SizeGT(0),
+		file.FileChildrenNotNil(),
+	).Order(file.ByID())
 }
 
 func (f *fileClient) CountEntityByTimeRange(ctx context.Context, start, end *time.Time) (int, error) {

@@ -755,6 +755,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromJSON[explorer.ImportWorkflowService](explorer.CreateImportParamCtx{}),
 				controllers.ImportFiles,
 			)
+			// Create task to import files
+			wf.POST("rebuildFtsIndex",
+				middleware.IsAdmin(),
+				middleware.RequiredScopes(types.ScopeWorkflowWrite, types.ScopeAdminWrite),
+				controllers.FromJSON[explorer.RebuildFTSIndexWorkflowService](explorer.CreateRebuildFTSIndexParamCtx{}),
+				controllers.RebuildFTSIndex,
+			)
 
 			// 取得文件外链
 			source := file.Group("source")

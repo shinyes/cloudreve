@@ -596,7 +596,7 @@ var DefaultSettings = map[string]string{
 	"max_recursive_searched_folder":              "65535",
 	"max_batched_file":                           "3000",
 	"queue_media_meta_worker_num":                "30",
-	"queue_media_meta_max_execution":             "600",
+	"queue_media_meta_max_execution":             "3600",
 	"queue_media_meta_backoff_factor":            "2",
 	"queue_media_meta_backoff_max_duration":      "60",
 	"queue_media_meta_max_retry":                 "1",

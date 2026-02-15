@@ -297,13 +297,16 @@ func (m *manager) CompleteUpload(ctx context.Context, session *fs.UploadSession)
 	}
 
 	var (
-		file fs.File
+		file    fs.File
+		ownerId int
 	)
 	if m.fs != nil {
 		file, err = m.fs.CompleteUpload(ctx, session)
 		if err != nil {
 			return nil, fmt.Errorf("failed to complete upload: %w", err)
 		}
+
+		ownerId = file.OwnerID()
 	}
 
 	if session.SentinelTaskID > 0 {
@@ -314,7 +317,7 @@ func (m *manager) CompleteUpload(ctx context.Context, session *fs.UploadSession)
 		}
 	}
 
-	m.onNewEntityUploaded(ctx, session, d, file.OwnerID())
+	m.onNewEntityUploaded(ctx, session, d, ownerId)
 	// Remove upload session
 	_ = m.kv.Delete(UploadSessionCachePrefix, session.Props.UploadSessionID)
 	return file, nil

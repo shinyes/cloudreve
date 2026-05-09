@@ -372,6 +372,10 @@ func (f *File) Recycle() {
 	f.Parent = nil
 	f.OwnerModel = nil
 	f.IsUserRoot = false
+	f.CapabilitiesBs = nil
+	f.FileExtendedInfo = nil
+	f.FileFolderSummary = nil
+	f.disableView = false
 	f.mu = nil
 
 	filePool.Put(f)

@@ -126,6 +126,10 @@ func (f *File) SizeUsed() int64 {
 	})
 }
 
+func (f *File) InTrashBin() bool {
+	return f.Root().Name() != inventory.RootFolderName
+}
+
 func (f *File) UpdatedAt() time.Time {
 	return f.Model.UpdatedAt
 }

@@ -1007,6 +1007,7 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 					{
 						// 获取 OneDrive OAuth URL
 						oauth.POST("signin",
+							middleware.RequiredScopes(types.ScopeAdminWrite),
 							controllers.FromJSON[adminsvc.GetOauthRedirectService](adminsvc.GetOauthRedirectParamCtx{}),
 							controllers.AdminOdOAuthURL,
 						)

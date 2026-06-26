@@ -1049,11 +1049,13 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 						controllers.AdminGetNode,
 					)
 					node.POST("test",
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.FromJSON[adminsvc.TestNodeService](adminsvc.TestNodeParamCtx{}),
 						controllers.AdminTestSlave,
 					)
 					node.POST("test/downloader",
 						controllers.FromJSON[adminsvc.TestNodeDownloaderService](adminsvc.TestNodeDownloaderParamCtx{}),
+						middleware.RequiredScopes(types.ScopeAdminWrite),
 						controllers.AdminTestDownloader,
 					)
 					node.PUT("",

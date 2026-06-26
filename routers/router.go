@@ -862,10 +862,10 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 		// 需要登录保护的
 		auth := v4.Group("")
 		auth.Use(middleware.LoginRequired())
-		auth.Use(middleware.RequiredScopes(types.ScopeAdminRead))
 		{
 			// 管理
 			admin := auth.Group("admin", middleware.IsAdmin())
+			admin.Use(middleware.RequiredScopes(types.ScopeAdminRead))
 			{
 				admin.GET("summary",
 					controllers.FromQuery[adminsvc.SummaryService](adminsvc.SummaryParamCtx{}),

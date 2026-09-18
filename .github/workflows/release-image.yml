@@ -160,14 +160,13 @@ jobs:
           name: assets-zip
           path: application/statics
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
       # A per-architecture build is loaded into the local daemon so it can be exported
       # with `docker save`; a multi-arch manifest cannot be saved as a single archive.
+      # No QEMU here: the Dockerfile cross-compiles Go with TARGETARCH, so nothing is
+      # executed for the foreign platform.
       - name: Build the image for ${{ matrix.platform }}
         uses: docker/build-push-action@v6
         with:

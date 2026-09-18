@@ -1,0 +1,40 @@
+# Keep the build context small: the Dockerfile only needs the Go sources,
+# .build/, and the pre-built application/statics/assets.zip. Without this file the
+# context is over 1GB, dominated by the frontend dependency tree, which the release
+# workflow has already compiled into that zip.
+
+# Local instances, scratch state and test tooling.
+run/
+data/
+tests/
+.backup-multipolicy/
+tmp/
+dist/
+release/
+
+# Version control.
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# Editor and OS noise.
+.idea/
+.vscode/
+.devcontainer/
+.DS_Store
+
+# Frontend sources and dependencies: the workflow builds these into
+# application/statics/assets.zip before the image build runs. Excluding the tree
+# keeps the context at a few MB instead of over a GB.
+assets/node_modules/
+assets/build/
+assets/src/
+assets/public/
+assets/.yarn/
+assets/*.log
+
+# Binaries and archives produced locally.
+*.exe
+*.test
+*.out

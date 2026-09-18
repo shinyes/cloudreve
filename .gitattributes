@@ -1,0 +1,24 @@
+# Shell scripts are executed inside the container and by CI; CRLF endings break
+# them there ("sh: ./entrypoint.sh: not found" or a stray \r in arguments).
+*.sh text eol=lf
+*.ps1 text eol=crlf
+
+# Files whose byte content matters to a build or a runtime comparison.
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+*.json text eol=lf
+*.go text eol=lf
+*.mjs text eol=lf
+
+# Binary assets must never be line-ending converted.
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.gz binary

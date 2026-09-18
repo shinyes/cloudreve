@@ -179,6 +179,57 @@ type (
 	CreateArchiveParamCtx struct{}
 )
 
+type (
+	// RelocateWorkflowService moves the data of the selected files or folders to
+	// another storage policy.
+	RelocateWorkflowService struct {
+		Src []string `json:"src" binding:"required"`
+		// DstPolicy is the hash ID of the target storage policy. It must be one of
+		// the policies granted to the current user's group.
+		DstPolicy string `json:"dst_policy_id" binding:"required"`
+	}
+	CreateRelocateParamCtx struct{}
+)
+
+func (service *RelocateWorkflowService) CreateRelocateTask(c *gin.Context) (*TaskResponse, error) {
+	dep := dependency.FromContext(c)
+	user := inventory.UserFromContext(c)
+	hasher := dep.HashIDEncoder()
+
+	if len(service.Src) == 0 {
+		return nil, serializer.NewError(serializer.CodeParamErr, "No source files", nil)
+	}
+
+	dstPolicyID, err := hasher.Decode(service.DstPolicy, hashid.PolicyID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeParamErr, "Invalid target storage policy", err)
+	}
+
+	// Relocation only makes sense when the group has somewhere else to move data
+	// to; with a single granted policy the whole feature is a no-op.
+	policies, err := dep.StoragePolicyClient().ListByGroup(c, user.Edges.Group)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeDBError, "Failed to get available storage policies", err)
+	}
+
+	if len(policies) <= 1 {
+		return nil, serializer.NewError(serializer.CodeParamErr,
+			"Your account only has a single storage policy, nothing to relocate to", nil)
+	}
+
+	// Create task
+	t, err := workflows.NewRelocateTask(c, service.Src, dstPolicyID)
+	if err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to create task", err)
+	}
+
+	if err := dep.IoIntenseQueue(c).QueueTask(c, t); err != nil {
+		return nil, serializer.NewError(serializer.CodeCreateTaskError, "Failed to queue task", err)
+	}
+
+	return BuildTaskResponse(t, nil, hasher), nil
+}
+
 func (service *ArchiveWorkflowService) CreateExtractTask(c *gin.Context) (*TaskResponse, error) {
 	dep := dependency.FromContext(c)
 	user := inventory.UserFromContext(c)

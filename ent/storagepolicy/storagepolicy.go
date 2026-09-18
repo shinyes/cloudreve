@@ -56,13 +56,11 @@ const (
 	EdgeNode = "node"
 	// Table holds the table name of the storagepolicy in the database.
 	Table = "storage_policies"
-	// GroupsTable is the table that holds the groups relation/edge.
-	GroupsTable = "groups"
+	// GroupsTable is the table that holds the groups relation/edge. The primary key declared below.
+	GroupsTable = "group_storage_policies"
 	// GroupsInverseTable is the table name for the Group entity.
 	// It exists in this package in order to avoid circular dependency with the "group" package.
 	GroupsInverseTable = "groups"
-	// GroupsColumn is the table column denoting the groups relation/edge.
-	GroupsColumn = "storage_policy_id"
 	// FilesTable is the table that holds the files relation/edge.
 	FilesTable = "files"
 	// FilesInverseTable is the table name for the File entity.
@@ -105,6 +103,12 @@ var Columns = []string{
 	FieldSettings,
 	FieldNodeID,
 }
+
+var (
+	// GroupsPrimaryKey and GroupsColumn2 are the table columns denoting the
+	// primary key for the groups relation (M2M).
+	GroupsPrimaryKey = []string{"group_id", "storage_policy_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -264,7 +268,7 @@ func newGroupsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(GroupsInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, GroupsTable, GroupsColumn),
+		sqlgraph.Edge(sqlgraph.M2M, true, GroupsTable, GroupsPrimaryKey...),
 	)
 }
 func newFilesStep() *sqlgraph.Step {

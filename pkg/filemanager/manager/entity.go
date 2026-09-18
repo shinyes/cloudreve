@@ -45,6 +45,9 @@ type (
 		ListPhysical(ctx context.Context, path string, policyID int, recursive bool, progress driver.ListProgressFunc) ([]fs.PhysicalObject, error)
 		// ImportPhysical imports a physical file to a Cloudreve file
 		ImportPhysical(ctx context.Context, dst *fs.URI, policyId int, src fs.PhysicalObject, completeHook bool) error
+		// RelocateFile moves every blob of the given file to another storage
+		// policy. All-or-nothing per file: a failure leaves the file untouched.
+		RelocateFile(ctx context.Context, uri *fs.URI, targetPolicyID int) error
 	}
 	DirectLink struct {
 		File fs.File
@@ -381,6 +384,8 @@ func (l *manager) ImportPhysical(ctx context.Context, dst *fs.URI, policyId int,
 			PreferredStoragePolicy: policyId,
 			SavePath:               src.Source,
 			LastModified:           &src.LastModify,
+			// Administrator-driven import: any storage policy may be targeted.
+			Importing: true,
 		},
 		ImportFrom: &src,
 	}

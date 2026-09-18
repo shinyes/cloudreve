@@ -51,6 +51,10 @@ func migrate(l logging.Logger, client *ent.Client, ctx context.Context, kv cache
 		return fmt.Errorf("failed migrating OAuth client: %w", err)
 	}
 
+	if err := migrateGroupStoragePolicies(l, client, ctx); err != nil {
+		return fmt.Errorf("failed migrating group storage policies: %w", err)
+	}
+
 	if err := applyPatches(l, client, ctx, requiredDbVersion); err != nil {
 		return fmt.Errorf("failed applying schema patches: %w", err)
 	}
@@ -159,7 +163,7 @@ func migrateAdminGroup(l logging.Logger, client *ent.Client, ctx context.Context
 	}, permissions)
 	if _, err := client.Group.Create().
 		SetName("Admin").
-		SetStoragePoliciesID(1).
+		AddStoragePolicyIDs(1).
 		SetMaxStorage(1 * constants.TB). // 1 TB default storage
 		SetPermissions(permissions).
 		SetSettings(&types.GroupSetting{
@@ -191,7 +195,7 @@ func migrateUserGroup(l logging.Logger, client *ent.Client, ctx context.Context)
 	}, permissions)
 	if _, err := client.Group.Create().
 		SetName("User").
-		SetStoragePoliciesID(1).
+		AddStoragePolicyIDs(1).
 		SetMaxStorage(1 * constants.GB). // 1 GB default storage
 		SetPermissions(permissions).
 		SetSettings(&types.GroupSetting{
@@ -293,6 +297,41 @@ func migrateOAuthClient(l logging.Logger, client *ent.Client, ctx context.Contex
 
 	if err := migrateOAuthClientiOS(l, client, ctx); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// migrateGroupStoragePolicies makes sure every group is bound to at least one
+// storage policy through the group_storage_policies join table. The table is
+// created by the automatic schema migration; this covers installations that
+// were initially created before the join table existed, and acts as a safety
+// net so an upgrade can never leave a group without any usable policy.
+func migrateGroupStoragePolicies(l logging.Logger, client *ent.Client, ctx context.Context) error {
+	groups, err := client.Group.Query().Order(ent.Asc(group.FieldID)).All(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query groups: %w", err)
+	}
+
+	defaultPolicy, err := client.StoragePolicy.Query().Order(ent.Asc(storagepolicy.FieldID)).First(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query default storage policy: %w", err)
+	}
+
+	for _, g := range groups {
+		if count, err := client.Group.QueryStoragePolicies(g).Count(ctx); err != nil {
+			return fmt.Errorf("failed to count storage policies of group %d: %w", g.ID, err)
+		} else if count > 0 {
+			continue
+		}
+
+		if _, err := client.Group.UpdateOneID(g.ID).
+			AddStoragePolicyIDs(defaultPolicy.ID).
+			Save(ctx); err != nil {
+			return fmt.Errorf("failed to bind default storage policy to group %d: %w", g.ID, err)
+		}
+
+		l.Info("Bound default storage policy %d to group %d.", defaultPolicy.ID, g.ID)
 	}
 
 	return nil
@@ -577,6 +616,49 @@ var patches = []Patch{
 				return fmt.Errorf("failed to update secret_key setting: %w", err)
 			}
 
+			return nil
+		},
+	},
+	{
+		Name:       "backfill_group_storage_policies",
+		EndVersion: "4.15.0",
+		Func: func(l logging.Logger, client *ent.Client, ctx context.Context) error {
+			// A group used to reference exactly one storage policy through the
+			// scalar groups.storage_policy_id column. That column is superseded
+			// by the group_storage_policies join table (created by the automatic
+			// schema migration that runs before the patches), so existing grants
+			// have to be carried over before the column is retired.
+			groups, err := client.Group.Query().All(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to query groups: %w", err)
+			}
+
+			backfilled := 0
+			for _, g := range groups {
+				if g.StoragePolicyID <= 0 {
+					continue
+				}
+
+				existing, err := client.Group.QueryStoragePolicies(g).Count(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to count storage policies of group %d: %w", g.ID, err)
+				}
+
+				if existing > 0 {
+					// Join table already holds grants for this group, keep them.
+					continue
+				}
+
+				if _, err := client.Group.UpdateOneID(g.ID).
+					AddStoragePolicyIDs(g.StoragePolicyID).
+					Save(ctx); err != nil {
+					return fmt.Errorf("failed to backfill storage policy of group %d: %w", g.ID, err)
+				}
+
+				backfilled++
+			}
+
+			l.Info("Backfilled storage policy binding for %d group(s).", backfilled)
 			return nil
 		},
 	},

@@ -121,14 +121,20 @@ func (f *DBFS) PrepareUpload(ctx context.Context, req *fs.UploadRequest, opts ..
 		return nil, err
 	}
 
-	// Get parent folder storage policy and performs validation
+	// Resolve the storage policy for this upload. A regular upload either
+	// honours the folder preference, or an explicitly requested policy - which
+	// must be one of the policies granted to the owner's group. An
+	// administrator-driven import may target any policy.
 	var (
 		policy *ent.StoragePolicy
 	)
-	if req.ImportFrom == nil {
-		policy, err = f.getPreferredPolicy(ctx, ancestor)
-	} else {
+	switch {
+	case req.Props.Importing:
 		policy, err = f.storagePolicyClient.GetPolicyByID(ctx, req.Props.PreferredStoragePolicy)
+	case req.Props.PreferredStoragePolicy > 0:
+		policy, err = f.requestedPolicy(ctx, req.Props.PreferredStoragePolicy, ancestor)
+	default:
+		policy, err = f.getPreferredPolicy(ctx, ancestor)
 	}
 	if err != nil {
 		return nil, err

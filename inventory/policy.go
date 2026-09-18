@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
@@ -28,8 +29,10 @@ type (
 
 	StoragePolicyClient interface {
 		TxOperator
-		// GetByGroup returns the storage policies of the group.
-		GetByGroup(ctx context.Context, group *ent.Group) (*ent.StoragePolicy, error)
+		// ListByGroup returns all storage policies granted to the group, ordered
+		// by policy ID. A group can be granted multiple policies; the user picks
+		// one per folder, falling back to the first entry of this list.
+		ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error)
 		// GetPolicyByID returns the storage policy by id.
 		GetPolicyByID(ctx context.Context, id int) (*ent.StoragePolicy, error)
 		// UpdateAccessKey updates the access key of the storage policy. It also clear related cache in KV.
@@ -142,14 +145,23 @@ func (c *storagePolicyClient) Upsert(ctx context.Context, policy *ent.StoragePol
 
 }
 
-func (c *storagePolicyClient) GetByGroup(ctx context.Context, group *ent.Group) (*ent.StoragePolicy, error) {
-	val, skipCache := ctx.Value(SkipStoragePolicyCache{}).(bool)
-	skipCache = skipCache && val
-
-	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePolicies(group)).WithNode().First(ctx)
+// ListByGroup returns all storage policies granted to the group, ordered by
+// policy ID. The order is explicit because the generated many-to-many eager
+// loader does not emit an ORDER BY, which would otherwise make the fallback
+// ("first available policy") non-deterministic.
+func (c *storagePolicyClient) ListByGroup(ctx context.Context, group *ent.Group) ([]*ent.StoragePolicy, error) {
+	res, err := withStoragePolicyEagerLoading(ctx, c.client.Group.QueryStoragePolicies(group)).
+		WithNode().
+		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get storage policies: %w", err)
+		return nil, fmt.Errorf("get storage policies of group %d: %w", group.ID, err)
 	}
+
+	// Order in Go: the generated many-to-many eager loader emits no ORDER BY,
+	// and the per-dialect order helpers are not exposed for edge queries.
+	slices.SortFunc(res, func(a, b *ent.StoragePolicy) int {
+		return a.ID - b.ID
+	})
 
 	return res, nil
 }

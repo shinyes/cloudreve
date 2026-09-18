@@ -98,7 +98,7 @@ func (gq *GroupQuery) QueryStoragePolicies() *StoragePolicyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, selector),
 			sqlgraph.To(storagepolicy.Table, storagepolicy.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, group.StoragePoliciesTable, group.StoragePoliciesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.StoragePoliciesTable, group.StoragePoliciesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
 		return fromU, nil
@@ -437,8 +437,9 @@ func (gq *GroupQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Group,
 		}
 	}
 	if query := gq.withStoragePolicies; query != nil {
-		if err := gq.loadStoragePolicies(ctx, query, nodes, nil,
-			func(n *Group, e *StoragePolicy) { n.Edges.StoragePolicies = e }); err != nil {
+		if err := gq.loadStoragePolicies(ctx, query, nodes,
+			func(n *Group) { n.Edges.StoragePolicies = []*StoragePolicy{} },
+			func(n *Group, e *StoragePolicy) { n.Edges.StoragePolicies = append(n.Edges.StoragePolicies, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -476,30 +477,62 @@ func (gq *GroupQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*
 	return nil
 }
 func (gq *GroupQuery) loadStoragePolicies(ctx context.Context, query *StoragePolicyQuery, nodes []*Group, init func(*Group), assign func(*Group, *StoragePolicy)) error {
-	ids := make([]int, 0, len(nodes))
-	nodeids := make(map[int][]*Group)
-	for i := range nodes {
-		fk := nodes[i].StoragePolicyID
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*Group)
+	nids := make(map[int]map[*Group]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
 		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(ids) == 0 {
-		return nil
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(group.StoragePoliciesTable)
+		s.Join(joinT).On(s.C(storagepolicy.FieldID), joinT.C(group.StoragePoliciesPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(group.StoragePoliciesPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(group.StoragePoliciesPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(storagepolicy.IDIn(ids...))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Group]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*StoragePolicy](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "storage_policy_id" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "storage_policies" node returned %v`, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil
@@ -529,9 +562,6 @@ func (gq *GroupQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != group.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
-		}
-		if gq.withStoragePolicies != nil {
-			_spec.Node.AddColumnOnce(group.FieldStoragePolicyID)
 		}
 	}
 	if ps := gq.predicates; len(ps) > 0 {

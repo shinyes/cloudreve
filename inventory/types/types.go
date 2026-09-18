@@ -197,6 +197,11 @@ type (
 
 	FileProps struct {
 		View *ExplorerView `json:"view,omitempty"`
+		// PreferredPolicyID is the storage policy the user picked for this
+		// folder. New files uploaded into this folder (or into any descendant
+		// folder without its own preference) use this policy, as long as the
+		// policy is still granted to the owner's group. 0 means "not set".
+		PreferredPolicyID int `json:"preferred_policy_id,omitempty"`
 	}
 
 	ExplorerView struct {

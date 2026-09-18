@@ -1,0 +1,228 @@
+name: Release container images
+
+# Tags matching x.y.z (for example 4.16.0) publish:
+#   * a multi-arch image (linux/amd64 + linux/arm64) to ghcr.io,
+#   * one compressed `docker save` archive per architecture on the GitHub release.
+#
+# The tag doubles as the reported backend version, so it must not carry a leading
+# "v": application/statics compares the version embedded in the frontend bundle
+# against constants.BackendVersion and refuses to serve a mismatched UI.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+env:
+  # The image is published under the repository owner so a fork pushes to its own
+  # namespace instead of trying to write to the upstream package.
+  IMAGE: ghcr.io/${{ github.repository_owner }}/cloudreve
+  NODE_VERSION: "20"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Build embedded frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: assets/yarn.lock
+
+      - name: Install frontend dependencies
+        working-directory: assets
+        run: yarn install --frozen-lockfile --network-timeout 1000000
+
+      # `npm run build` rather than `build-prod`: the latter runs tsc first, and the
+      # repository carries unrelated pre-existing type errors that would fail the
+      # release. Vite performs the actual bundling either way.
+      - name: Build frontend bundle
+        working-directory: assets
+        env:
+          # 8GB is what the local build script uses, but GitHub runners have less.
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
+      # statics.go refuses to start when version.json and the compiled backend version
+      # disagree, so the file has to carry the release tag.
+      - name: Stamp the frontend version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const version = process.env.GITHUB_REF_NAME;
+            fs.writeFileSync('assets/build/version.json', JSON.stringify({ name: 'cloudreve-frontend', version }));
+            console.log('version.json ->', version);
+          "
+
+      # The zip is embedded with //go:embed and unwrapped with fs.Sub(..., "assets/build"),
+      # so every entry needs that exact prefix and forward slashes.
+      - name: Package assets.zip
+        run: |
+          mkdir -p application/statics
+          (cd assets && zip -q -r -X ../application/statics/assets.zip build)
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('application/statics/assets.zip') as z:
+              names = z.namelist()
+          assert not any('\\' in n for n in names), 'zip entries must use forward slashes'
+          prefixed = [n for n in names if n.startswith('assets/build/')]
+          assert prefixed, 'zip entries must be prefixed with assets/build/'
+          assert 'assets/build/version.json' in names, 'version.json is missing from the bundle'
+          print(f'{len(names)} entries, {len(prefixed)} under assets/build/')
+          PY
+
+      - name: Upload the bundle for the build jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets-zip
+          path: application/statics/assets.zip
+          retention-days: 1
+
+  image:
+    name: Publish multi-arch image
+    needs: frontend
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Fetch the embedded frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: assets-zip
+          path: application/statics
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest
+            type=raw,value=v4
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  archives:
+    name: Build downloadable archives
+    needs: frontend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+          - platform: linux/arm64
+            suffix: arm64
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+
+      - name: Fetch the embedded frontend
+        uses: actions/download-artifact@v4
+        with:
+          name: assets-zip
+          path: application/statics
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # A per-architecture build is loaded into the local daemon so it can be exported
+      # with `docker save`; a multi-arch manifest cannot be saved as a single archive.
+      - name: Build the image for ${{ matrix.platform }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          load: true
+          push: false
+          tags: cloudreve-release:${{ github.ref_name }}-${{ matrix.suffix }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+          cache-from: type=gha
+
+      - name: Export and compress
+        env:
+          SUFFIX: ${{ matrix.suffix }}
+        run: |
+          set -euo pipefail
+          name="cloudreve_${GITHUB_REF_NAME}_linux_${SUFFIX}"
+          docker save "cloudreve-release:${GITHUB_REF_NAME}-${SUFFIX}" -o "${name}.tar"
+          gzip -9 "${name}.tar"
+          ls -lh "${name}.tar.gz"
+          echo "ARCHIVE=${name}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Upload the archive as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-archive-${{ matrix.suffix }}
+          path: ${{ env.ARCHIVE }}
+          retention-days: 7
+
+  release:
+    name: Attach archives to the release
+    needs: [image, archives]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch the archives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-archive-*
+          merge-multiple: true
+          path: archives
+
+      - name: List what will be published
+        run: ls -lh archives
+
+      # The release has no source archive to depend on: this step owns creating it.
+      # `contents: write` lets the default token create it, so no extra secret is
+      # needed unless the repository forbids that.
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: archives/*.tar.gz

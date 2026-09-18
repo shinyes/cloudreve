@@ -47,7 +47,10 @@ func (StoragePolicy) Mixin() []ent.Mixin {
 
 func (StoragePolicy) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("groups", Group.Type),
+		// Many-to-many: a policy can be granted to multiple groups, and a group
+		// can be granted multiple policies.
+		edge.From("groups", Group.Type).
+			Ref("storage_policies"),
 		edge.To("files", File.Type),
 		edge.To("entities", Entity.Type),
 		edge.From("node", Node.Type).

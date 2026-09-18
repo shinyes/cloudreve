@@ -24,7 +24,12 @@ func (Group) Fields() []ent.Field {
 		field.JSON("settings", &types.GroupSetting{}).
 			Default(&types.GroupSetting{}).
 			Optional(),
-		field.Int("storage_policy_id").Optional(),
+		// Deprecated: replaced by the many-to-many "storage_policies" edge.
+		// Kept so that schema patches can backfill the new join table before
+		// the column is dropped in a later release.
+		field.Int("storage_policy_id").
+			Optional().
+			Comment("Deprecated: superseded by the storage_policies many-to-many edge."),
 	}
 }
 
@@ -37,9 +42,10 @@ func (Group) Mixin() []ent.Mixin {
 func (Group) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("users", User.Type),
-		edge.From("storage_policies", StoragePolicy.Type).
-			Ref("groups").
-			Field("storage_policy_id").
-			Unique(),
+		// A group can be granted multiple storage policies. The order of the
+		// edge determines the fallback policy: the first policy of the list is
+		// used when neither the target folder nor any of its ancestors has a
+		// preferred policy set by the user.
+		edge.To("storage_policies", StoragePolicy.Type),
 	}
 }

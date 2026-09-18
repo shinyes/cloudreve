@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/cloudreve/Cloudreve/v4/ent/group"
-	"github.com/cloudreve/Cloudreve/v4/ent/storagepolicy"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/boolset"
 )
@@ -37,7 +36,7 @@ type Group struct {
 	Permissions *boolset.BooleanSet `json:"permissions,omitempty"`
 	// Settings holds the value of the "settings" field.
 	Settings *types.GroupSetting `json:"settings,omitempty"`
-	// StoragePolicyID holds the value of the "storage_policy_id" field.
+	// Deprecated: superseded by the storage_policies many-to-many edge.
 	StoragePolicyID int `json:"storage_policy_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.
@@ -50,7 +49,7 @@ type GroupEdges struct {
 	// Users holds the value of the users edge.
 	Users []*User `json:"users,omitempty"`
 	// StoragePolicies holds the value of the storage_policies edge.
-	StoragePolicies *StoragePolicy `json:"storage_policies,omitempty"`
+	StoragePolicies []*StoragePolicy `json:"storage_policies,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -66,13 +65,9 @@ func (e GroupEdges) UsersOrErr() ([]*User, error) {
 }
 
 // StoragePoliciesOrErr returns the StoragePolicies value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e GroupEdges) StoragePoliciesOrErr() (*StoragePolicy, error) {
+// was not loaded in eager-loading.
+func (e GroupEdges) StoragePoliciesOrErr() ([]*StoragePolicy, error) {
 	if e.loadedTypes[1] {
-		if e.StoragePolicies == nil {
-			// Edge was loaded but was not found.
-			return nil, &NotFoundError{label: storagepolicy.Label}
-		}
 		return e.StoragePolicies, nil
 	}
 	return nil, &NotLoadedError{edge: "storage_policies"}
@@ -256,7 +251,7 @@ func (e *Group) SetUsers(v []*User) {
 }
 
 // SetStoragePolicies manually set the edge as loaded state.
-func (e *Group) SetStoragePolicies(v *StoragePolicy) {
+func (e *Group) SetStoragePolicies(v []*StoragePolicy) {
 	e.Edges.StoragePolicies = v
 	e.Edges.loadedTypes[1] = true
 }

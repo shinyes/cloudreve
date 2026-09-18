@@ -27,6 +27,12 @@ func (f *DBFS) PatchProps(ctx context.Context, uri *fs.URI, props *types.FilePro
 		return fs.ErrOwnerOnly.WithError(fmt.Errorf("only file owner can modify file props"))
 	}
 
+	if props.PreferredPolicyID > 0 {
+		if err := f.validatePolicyAllowed(ctx, props.PreferredPolicyID, target.Owner().Edges.Group); err != nil {
+			return err
+		}
+	}
+
 	// Lock target
 	lr := &LockByPath{target.Uri(true), target, target.Type(), ""}
 	ls, err := f.acquireByPath(ctx, -1, f.user, true, fs.LockApp(fs.ApplicationUpdateMetadata), lr)
@@ -46,6 +52,12 @@ func (f *DBFS) PatchProps(ctx context.Context, uri *fs.URI, props *types.FilePro
 		} else {
 			currentProps.View = props.View
 		}
+	}
+
+	// A preferred policy can only be set on folders. An explicit 0 clears the
+	// preference, falling back to the owner's group default policy.
+	if props.PreferredPolicyID > 0 || delete {
+		currentProps.PreferredPolicyID = props.PreferredPolicyID
 	}
 
 	if _, err := f.fileClient.UpdateProps(ctx, target.Model, currentProps); err != nil {

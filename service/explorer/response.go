@@ -59,8 +59,8 @@ func BuildArchiveListFilesResponse(files []manager.ArchivedFile) *ArchiveListFil
 }
 
 type PutRelativeResponse struct {
-	Name string `json:"Name"`
-	Url  string `json:"Url"`
+	Name string
+	Url  string
 }
 
 type DirectLinkResponse struct {
@@ -196,45 +196,45 @@ func BuildUploadSessionResponse(session *fs.UploadCredential, hasher hashid.Enco
 // WopiFileInfo Response for `CheckFileInfo`
 type WopiFileInfo struct {
 	// Required
-	BaseFileName string `json:"BaseFileName"`
-	Version      string `json:"Version"`
-	Size         int64  `json:"Size"`
+	BaseFileName string
+	Version      string
+	Size         int64
 
 	// Breadcrumb
-	BreadcrumbBrandName  string `json:"BreadcrumbBrandName"`
-	BreadcrumbBrandUrl   string `json:"BreadcrumbBrandUrl"`
-	BreadcrumbFolderName string `json:"BreadcrumbFolderName"`
-	BreadcrumbFolderUrl  string `json:"BreadcrumbFolderUrl"`
+	BreadcrumbBrandName  string
+	BreadcrumbBrandUrl   string
+	BreadcrumbFolderName string
+	BreadcrumbFolderUrl  string
 
 	// Post Message
-	FileSharingPostMessage bool   `json:"FileSharingPostMessage"`
-	FileVersionPostMessage bool   `json:"FileVersionPostMessage"`
-	ClosePostMessage       bool   `json:"ClosePostMessage"`
-	PostMessageOrigin      string `json:"PostMessageOrigin"`
+	FileSharingPostMessage bool
+	FileVersionPostMessage bool
+	ClosePostMessage       bool
+	PostMessageOrigin      string
 
 	// Other miscellaneous properties
-	FileNameMaxLength int    `json:"FileNameMaxLength"`
-	LastModifiedTime  string `json:"LastModifiedTime"`
+	FileNameMaxLength int
+	LastModifiedTime  string
 
 	// User metadata
-	IsAnonymousUser  bool   `json:"IsAnonymousUser"`
-	UserFriendlyName string `json:"UserFriendlyName"`
-	UserId           string `json:"UserId"`
-	OwnerId          string `json:"OwnerId"`
+	IsAnonymousUser  bool
+	UserFriendlyName string
+	UserId           string
+	OwnerId          string
 
 	// Permission
-	ReadOnly                bool `json:"ReadOnly"`
-	UserCanRename           bool `json:"UserCanRename"`
-	UserCanReview           bool `json:"UserCanReview"`
-	UserCanWrite            bool `json:"UserCanWrite"`
-	UserCanNotWriteRelative bool `json:"UserCanNotWriteRelative"`
+	ReadOnly                bool
+	UserCanRename           bool
+	UserCanReview           bool
+	UserCanWrite            bool
+	UserCanNotWriteRelative bool
 
-	SupportsRename    bool `json:"SupportsRename"`
-	SupportsReviewing bool `json:"SupportsReviewing"`
-	SupportsUpdate    bool `json:"SupportsUpdate"`
-	SupportsLocks     bool `json:"SupportsLocks"`
+	SupportsRename    bool
+	SupportsReviewing bool
+	SupportsUpdate    bool
+	SupportsLocks     bool
 
-	EnableShare bool `json:"EnableShare"`
+	EnableShare bool
 }
 
 type ViewerSessionResponse struct {

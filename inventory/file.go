@@ -205,6 +205,13 @@ type FileClient interface {
 	SoftDelete(ctx context.Context, file *ent.File) error
 	// SetPrimaryEntity sets primary entity of a file
 	SetPrimaryEntity(ctx context.Context, file *ent.File, entity *ent.Entity) error
+	// RelocateEntity re-points an entity to a blob stored under another storage
+	// policy, keeping the same entity row so every file referencing it, and any
+	// version chain it belongs to, stays intact. When setEncryptMetadata is set, the
+	// entity's encryption metadata is overwritten with encryptMetadata (nil meaning
+	// "no key material"), which covers moving plaintext onto an encrypting policy,
+	// decrypting a blob, and restoring the pre-move state on rollback.
+	RelocateEntity(ctx context.Context, entity *ent.Entity, newSource string, policyID int, encryptMetadata *types.EncryptMetadata, setEncryptMetadata bool) error
 	// UnlinkEntity unlinks an entity from a file
 	UnlinkEntity(ctx context.Context, entity *ent.Entity, file *ent.File, owner *ent.User) (StorageDiff, error)
 	// CreateDirectLink creates a direct link for a file
@@ -793,6 +800,42 @@ func (f *fileClient) UpgradePlaceholder(ctx context.Context, file *ent.File, mod
 
 func (f *fileClient) SetPrimaryEntity(ctx context.Context, file *ent.File, entity *ent.Entity) error {
 	return f.client.File.UpdateOne(file).SetPrimaryEntity(entity.ID).SetSize(entity.Size).Exec(ctx)
+}
+
+// RelocateEntity re-points an existing entity to a blob that has been written
+// under another storage policy.
+//
+// Updating in place is deliberate: `source` and `storage_policy_entities` are
+// plain mutable fields (ent/schema/entity.go), and the alternative - creating a
+// replacement entity - would have to keep reference_count and the file/entity
+// edges in sync, which is what makes a relocation able to corrupt shared blobs.
+// Because the entity row is reused, files sharing this blob keep sharing it, and
+// version chains need no repair.
+func (f *fileClient) RelocateEntity(ctx context.Context, entity *ent.Entity, newSource string, policyID int, encryptMetadata *types.EncryptMetadata, setEncryptMetadata bool) error {
+	stm := f.client.Entity.UpdateOne(entity).
+		SetSource(newSource).
+		SetStoragePolicyID(policyID)
+
+	// setEncryptMetadata is an explicit "write the metadata as given" switch: a nil
+	// value together with the switch set means "this blob has no key material", which
+	// is what both decrypting a blob and rolling back to a plaintext entity need.
+	if setEncryptMetadata {
+		props := &types.EntityProps{}
+		if encryptMetadata != nil {
+			props.EncryptMetadata = &types.EncryptMetadata{
+				Algorithm: encryptMetadata.Algorithm,
+				Key:       encryptMetadata.Key,
+				IV:        encryptMetadata.IV,
+			}
+		}
+		stm.SetProps(props)
+	}
+
+	if err := stm.Exec(ctx); err != nil {
+		return fmt.Errorf("failed to relocate entity %d: %w", entity.ID, err)
+	}
+
+	return nil
 }
 
 func (f *fileClient) CreateFile(ctx context.Context, root *ent.File, args *CreateFileParameters) (*ent.File, *ent.Entity, StorageDiff, error) {

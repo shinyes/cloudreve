@@ -3,7 +3,10 @@ package constants
 // These values will be injected at build time, DO NOT EDIT.
 
 // BackendVersion 当前后端版本号
-var BackendVersion = "4.14.0"
+// NOTE: 该版本号同时是数据库 schema 版本标记（见 inventory.InitializeDBClient）。
+// 4.15.0 引入 group_storage_policies 多对多关联与回填补丁，必须递增版本号，
+// 否则已完成 4.14.0 迁移的数据库不会再次进入迁移流程，补丁不会执行。
+var BackendVersion = "4.15.0"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

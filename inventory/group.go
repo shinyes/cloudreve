@@ -77,6 +77,8 @@ func (c *groupClient) ListAll(ctx context.Context) ([]*ent.Group, error) {
 }
 
 func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group, error) {
+	policyIDs := storagePolicyIDs(group)
+
 	if group.ID == 0 {
 		stm := c.client.Group.Create().
 			SetName(group.Name).
@@ -85,8 +87,8 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 			SetPermissions(group.Permissions).
 			SetSettings(group.Settings)
 
-		if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
-			stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+		if len(policyIDs) > 0 {
+			stm.AddStoragePolicyIDs(policyIDs...)
 		}
 
 		return stm.Save(ctx)
@@ -100,8 +102,8 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 		SetSettings(group.Settings).
 		ClearStoragePolicies()
 
-	if group.Edges.StoragePolicies != nil && group.Edges.StoragePolicies.ID > 0 {
-		stm.SetStoragePolicyID(group.Edges.StoragePolicies.ID)
+	if len(policyIDs) > 0 {
+		stm.AddStoragePolicyIDs(policyIDs...)
 	}
 
 	res, err := stm.Save(ctx)
@@ -110,6 +112,23 @@ func (c *groupClient) Upsert(ctx context.Context, group *ent.Group) (*ent.Group,
 	}
 
 	return res, nil
+}
+
+// storagePolicyIDs returns the IDs of the storage policies granted to the group,
+// de-duplicated and preserving the order given by the caller.
+func storagePolicyIDs(group *ent.Group) []int {
+	ids := make([]int, 0, len(group.Edges.StoragePolicies))
+	seen := make(map[int]bool, len(group.Edges.StoragePolicies))
+	for _, p := range group.Edges.StoragePolicies {
+		if p == nil || p.ID <= 0 || seen[p.ID] {
+			continue
+		}
+
+		seen[p.ID] = true
+		ids = append(ids, p.ID)
+	}
+
+	return ids
 }
 
 func (c *groupClient) Delete(ctx context.Context, id int) error {

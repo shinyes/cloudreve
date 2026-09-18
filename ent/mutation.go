@@ -5330,11 +5330,14 @@ type GroupMutation struct {
 	addspeed_limit          *int
 	permissions             **boolset.BooleanSet
 	settings                **types.GroupSetting
+	storage_policy_id       *int
+	addstorage_policy_id    *int
 	clearedFields           map[string]struct{}
 	users                   map[int]struct{}
 	removedusers            map[int]struct{}
 	clearedusers            bool
-	storage_policies        *int
+	storage_policies        map[int]struct{}
+	removedstorage_policies map[int]struct{}
 	clearedstorage_policies bool
 	done                    bool
 	oldValue                func(context.Context) (*Group, error)
@@ -5823,12 +5826,13 @@ func (m *GroupMutation) ResetSettings() {
 
 // SetStoragePolicyID sets the "storage_policy_id" field.
 func (m *GroupMutation) SetStoragePolicyID(i int) {
-	m.storage_policies = &i
+	m.storage_policy_id = &i
+	m.addstorage_policy_id = nil
 }
 
 // StoragePolicyID returns the value of the "storage_policy_id" field in the mutation.
 func (m *GroupMutation) StoragePolicyID() (r int, exists bool) {
-	v := m.storage_policies
+	v := m.storage_policy_id
 	if v == nil {
 		return
 	}
@@ -5852,9 +5856,28 @@ func (m *GroupMutation) OldStoragePolicyID(ctx context.Context) (v int, err erro
 	return oldValue.StoragePolicyID, nil
 }
 
+// AddStoragePolicyID adds i to the "storage_policy_id" field.
+func (m *GroupMutation) AddStoragePolicyID(i int) {
+	if m.addstorage_policy_id != nil {
+		*m.addstorage_policy_id += i
+	} else {
+		m.addstorage_policy_id = &i
+	}
+}
+
+// AddedStoragePolicyID returns the value that was added to the "storage_policy_id" field in this mutation.
+func (m *GroupMutation) AddedStoragePolicyID() (r int, exists bool) {
+	v := m.addstorage_policy_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
 // ClearStoragePolicyID clears the value of the "storage_policy_id" field.
 func (m *GroupMutation) ClearStoragePolicyID() {
-	m.storage_policies = nil
+	m.storage_policy_id = nil
+	m.addstorage_policy_id = nil
 	m.clearedFields[group.FieldStoragePolicyID] = struct{}{}
 }
 
@@ -5866,7 +5889,8 @@ func (m *GroupMutation) StoragePolicyIDCleared() bool {
 
 // ResetStoragePolicyID resets all changes to the "storage_policy_id" field.
 func (m *GroupMutation) ResetStoragePolicyID() {
-	m.storage_policies = nil
+	m.storage_policy_id = nil
+	m.addstorage_policy_id = nil
 	delete(m.clearedFields, group.FieldStoragePolicyID)
 }
 
@@ -5924,36 +5948,49 @@ func (m *GroupMutation) ResetUsers() {
 	m.removedusers = nil
 }
 
-// SetStoragePoliciesID sets the "storage_policies" edge to the StoragePolicy entity by id.
-func (m *GroupMutation) SetStoragePoliciesID(id int) {
-	m.storage_policies = &id
+// AddStoragePolicyIDs adds the "storage_policies" edge to the StoragePolicy entity by ids.
+func (m *GroupMutation) AddStoragePolicyIDs(ids ...int) {
+	if m.storage_policies == nil {
+		m.storage_policies = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.storage_policies[ids[i]] = struct{}{}
+	}
 }
 
 // ClearStoragePolicies clears the "storage_policies" edge to the StoragePolicy entity.
 func (m *GroupMutation) ClearStoragePolicies() {
 	m.clearedstorage_policies = true
-	m.clearedFields[group.FieldStoragePolicyID] = struct{}{}
 }
 
 // StoragePoliciesCleared reports if the "storage_policies" edge to the StoragePolicy entity was cleared.
 func (m *GroupMutation) StoragePoliciesCleared() bool {
-	return m.StoragePolicyIDCleared() || m.clearedstorage_policies
+	return m.clearedstorage_policies
 }
 
-// StoragePoliciesID returns the "storage_policies" edge ID in the mutation.
-func (m *GroupMutation) StoragePoliciesID() (id int, exists bool) {
-	if m.storage_policies != nil {
-		return *m.storage_policies, true
+// RemoveStoragePolicyIDs removes the "storage_policies" edge to the StoragePolicy entity by IDs.
+func (m *GroupMutation) RemoveStoragePolicyIDs(ids ...int) {
+	if m.removedstorage_policies == nil {
+		m.removedstorage_policies = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.storage_policies, ids[i])
+		m.removedstorage_policies[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedStoragePolicies returns the removed IDs of the "storage_policies" edge to the StoragePolicy entity.
+func (m *GroupMutation) RemovedStoragePoliciesIDs() (ids []int) {
+	for id := range m.removedstorage_policies {
+		ids = append(ids, id)
 	}
 	return
 }
 
 // StoragePoliciesIDs returns the "storage_policies" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// StoragePoliciesID instead. It exists only for internal usage by the builders.
 func (m *GroupMutation) StoragePoliciesIDs() (ids []int) {
-	if id := m.storage_policies; id != nil {
-		ids = append(ids, *id)
+	for id := range m.storage_policies {
+		ids = append(ids, id)
 	}
 	return
 }
@@ -5962,6 +5999,7 @@ func (m *GroupMutation) StoragePoliciesIDs() (ids []int) {
 func (m *GroupMutation) ResetStoragePolicies() {
 	m.storage_policies = nil
 	m.clearedstorage_policies = false
+	m.removedstorage_policies = nil
 }
 
 // Where appends a list predicates to the GroupMutation builder.
@@ -6023,7 +6061,7 @@ func (m *GroupMutation) Fields() []string {
 	if m.settings != nil {
 		fields = append(fields, group.FieldSettings)
 	}
-	if m.storage_policies != nil {
+	if m.storage_policy_id != nil {
 		fields = append(fields, group.FieldStoragePolicyID)
 	}
 	return fields
@@ -6165,6 +6203,9 @@ func (m *GroupMutation) AddedFields() []string {
 	if m.addspeed_limit != nil {
 		fields = append(fields, group.FieldSpeedLimit)
 	}
+	if m.addstorage_policy_id != nil {
+		fields = append(fields, group.FieldStoragePolicyID)
+	}
 	return fields
 }
 
@@ -6177,6 +6218,8 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMaxStorage()
 	case group.FieldSpeedLimit:
 		return m.AddedSpeedLimit()
+	case group.FieldStoragePolicyID:
+		return m.AddedStoragePolicyID()
 	}
 	return nil, false
 }
@@ -6199,6 +6242,13 @@ func (m *GroupMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddSpeedLimit(v)
+		return nil
+	case group.FieldStoragePolicyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStoragePolicyID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Group numeric field %s", name)
@@ -6314,9 +6364,11 @@ func (m *GroupMutation) AddedIDs(name string) []ent.Value {
 		}
 		return ids
 	case group.EdgeStoragePolicies:
-		if id := m.storage_policies; id != nil {
-			return []ent.Value{*id}
+		ids := make([]ent.Value, 0, len(m.storage_policies))
+		for id := range m.storage_policies {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -6326,6 +6378,9 @@ func (m *GroupMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
 	if m.removedusers != nil {
 		edges = append(edges, group.EdgeUsers)
+	}
+	if m.removedstorage_policies != nil {
+		edges = append(edges, group.EdgeStoragePolicies)
 	}
 	return edges
 }
@@ -6337,6 +6392,12 @@ func (m *GroupMutation) RemovedIDs(name string) []ent.Value {
 	case group.EdgeUsers:
 		ids := make([]ent.Value, 0, len(m.removedusers))
 		for id := range m.removedusers {
+			ids = append(ids, id)
+		}
+		return ids
+	case group.EdgeStoragePolicies:
+		ids := make([]ent.Value, 0, len(m.removedstorage_policies))
+		for id := range m.removedstorage_policies {
 			ids = append(ids, id)
 		}
 		return ids
@@ -6372,9 +6433,6 @@ func (m *GroupMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *GroupMutation) ClearEdge(name string) error {
 	switch name {
-	case group.EdgeStoragePolicies:
-		m.ClearStoragePolicies()
-		return nil
 	}
 	return fmt.Errorf("unknown Group unique edge %s", name)
 }

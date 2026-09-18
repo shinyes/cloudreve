@@ -389,3 +389,28 @@ func ListPublicShare(c *gin.Context) {
 		})
 	}
 }
+
+// UserAvailablePolicies lists the storage policies granted to current user
+func UserAvailablePolicies(c *gin.Context) {
+	service := ParametersFromContext[*user.ListAvailablePolicyService](c, user.ListAvailablePolicyParamCtx{})
+	res, err := service.List(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{Data: res})
+}
+
+// UserPatchPreferredPolicy sets the storage policy preferred for a folder
+func UserPatchPreferredPolicy(c *gin.Context) {
+	service := ParametersFromContext[*user.PatchPreferredPolicyService](c, user.PatchPreferredPolicyParamCtx{})
+	if err := service.Patch(c); err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	c.JSON(200, serializer.Response{})
+}

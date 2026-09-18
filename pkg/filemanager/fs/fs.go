@@ -99,6 +99,19 @@ type (
 		TraverseFile(ctx context.Context, fileID int) (File, error)
 		// PatchProps patches the props of a file.
 		PatchProps(ctx context.Context, uri *URI, props *types.FileProps, delete bool) error
+		// GetPreferredPolicyID returns the storage policy currently preferred
+		// for the folder at the given URI, as inherited from its nearest
+		// ancestor folder. 0 means no preference is set.
+		GetPreferredPolicyID(ctx context.Context, uri *URI) (int, error)
+		// PatchPreferredPolicy sets the storage policy preferred for the folder
+		// at the given URI. Passing 0 clears the preference.
+		PatchPreferredPolicy(ctx context.Context, uri *URI, policyID int) error
+		// RelocateSavePath computes the blob path the given policy would assign to
+		// an entity that currently lives at the given URI. It must be called only
+		// once per relocation: naming rules may contain random variables, so the
+		// returned path is the single source of truth for both writing the blob
+		// and recording its new location.
+		RelocateSavePath(ctx context.Context, uri *URI, targetPolicy *ent.StoragePolicy) (string, error)
 	}
 
 	UploadManager interface {
@@ -301,6 +314,9 @@ type (
 		ExpireAt            time.Time
 		EncryptionSupported []types.Cipher
 		ClientSideEncrypted bool // Whether the file stream is already encrypted by client side.
+		// Importing marks an administrator-driven physical import. The caller
+		// may then target any storage policy, bypassing the group binding check.
+		Importing bool
 	}
 
 	// FsOption options for underlying file system.

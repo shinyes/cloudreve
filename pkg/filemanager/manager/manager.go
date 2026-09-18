@@ -81,6 +81,13 @@ type (
 		GetStorageDriver(ctx context.Context, policy *ent.StoragePolicy) (driver.Handler, error)
 		// PatchView patches the view setting of a file
 		PatchView(ctx context.Context, uri *fs.URI, view *types.ExplorerView) error
+		// GetPreferredPolicy returns the storage policy preferred for the given
+		// path (0 means group default) along with the policies granted to the
+		// owner's group.
+		GetPreferredPolicy(ctx context.Context, uri *fs.URI) (int, []*ent.StoragePolicy, error)
+		// PatchPreferredPolicy sets (or clears, when policyID is 0) the storage
+		// policy preferred for the folder at the given path.
+		PatchPreferredPolicy(ctx context.Context, uri *fs.URI, policyID int) error
 	}
 
 	ShareManagement interface {

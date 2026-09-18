@@ -572,6 +572,12 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				controllers.FromJSON[explorer.ArchiveWorkflowService](explorer.CreateArchiveParamCtx{}),
 				controllers.ExtractArchive,
 			)
+			// Create task to relocate files to another storage policy
+			wf.POST("relocate",
+				middleware.RequiredScopes(types.ScopeWorkflowWrite),
+				controllers.FromJSON[explorer.RelocateWorkflowService](explorer.CreateRelocateParamCtx{}),
+				controllers.RelocateFiles,
+			)
 
 			remoteDownload := wf.Group("download")
 			{
@@ -1244,6 +1250,18 @@ func initMasterRouter(dep dependency.Dep) *gin.Engine {
 				user.GET("me", middleware.RequiredScopes(types.ScopeUserInfoRead), controllers.UserMe)
 				// 存储信息
 				user.GET("capacity", middleware.RequiredScopes(types.ScopeUserInfoRead), controllers.UserStorage)
+				// 当前用户可用的存储策略（可带 uri 参数以返回该目录当前生效的首选策略）
+				user.GET("policies",
+					middleware.RequiredScopes(types.ScopeUserInfoRead),
+					controllers.FromQuery[usersvc.ListAvailablePolicyService](usersvc.ListAvailablePolicyParamCtx{}),
+					controllers.UserAvailablePolicies,
+				)
+				// 设置/清除目录的首选存储策略
+				user.PATCH("preferredPolicy",
+					middleware.RequiredScopes(types.ScopeFilesWrite),
+					controllers.FromJSON[usersvc.PatchPreferredPolicyService](usersvc.PatchPreferredPolicyParamCtx{}),
+					controllers.UserPatchPreferredPolicy,
+				)
 				// Search user by keywords
 				user.GET("search",
 					middleware.RequiredScopes(types.ScopeUserInfoRead),

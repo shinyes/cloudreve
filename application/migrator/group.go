@@ -75,7 +75,9 @@ func (m *Migrator) migrateGroup() error {
 			SetSettings(newOpts)
 
 		if len(policies) > 0 {
-			stm.SetStoragePoliciesID(policies[0])
+			// A v3 group could already be granted multiple policies; carry the
+			// whole list over instead of keeping only the first one.
+			stm.AddStoragePolicyIDs(policies...)
 		}
 
 		if _, err := stm.Save(context.Background()); err != nil {

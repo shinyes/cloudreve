@@ -143,23 +143,19 @@ func (gc *GroupCreate) AddUsers(u ...*User) *GroupCreate {
 	return gc.AddUserIDs(ids...)
 }
 
-// SetStoragePoliciesID sets the "storage_policies" edge to the StoragePolicy entity by ID.
-func (gc *GroupCreate) SetStoragePoliciesID(id int) *GroupCreate {
-	gc.mutation.SetStoragePoliciesID(id)
+// AddStoragePolicyIDs adds the "storage_policies" edge to the StoragePolicy entity by IDs.
+func (gc *GroupCreate) AddStoragePolicyIDs(ids ...int) *GroupCreate {
+	gc.mutation.AddStoragePolicyIDs(ids...)
 	return gc
 }
 
-// SetNillableStoragePoliciesID sets the "storage_policies" edge to the StoragePolicy entity by ID if the given value is not nil.
-func (gc *GroupCreate) SetNillableStoragePoliciesID(id *int) *GroupCreate {
-	if id != nil {
-		gc = gc.SetStoragePoliciesID(*id)
+// AddStoragePolicies adds the "storage_policies" edges to the StoragePolicy entity.
+func (gc *GroupCreate) AddStoragePolicies(s ...*StoragePolicy) *GroupCreate {
+	ids := make([]int, len(s))
+	for i := range s {
+		ids[i] = s[i].ID
 	}
-	return gc
-}
-
-// SetStoragePolicies sets the "storage_policies" edge to the StoragePolicy entity.
-func (gc *GroupCreate) SetStoragePolicies(s *StoragePolicy) *GroupCreate {
-	return gc.SetStoragePoliciesID(s.ID)
+	return gc.AddStoragePolicyIDs(ids...)
 }
 
 // Mutation returns the GroupMutation object of the builder.
@@ -300,6 +296,10 @@ func (gc *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 		_spec.SetField(group.FieldSettings, field.TypeJSON, value)
 		_node.Settings = value
 	}
+	if value, ok := gc.mutation.StoragePolicyID(); ok {
+		_spec.SetField(group.FieldStoragePolicyID, field.TypeInt, value)
+		_node.StoragePolicyID = value
+	}
 	if nodes := gc.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
@@ -318,10 +318,10 @@ func (gc *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	}
 	if nodes := gc.mutation.StoragePoliciesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   group.StoragePoliciesTable,
-			Columns: []string{group.StoragePoliciesColumn},
+			Columns: group.StoragePoliciesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(storagepolicy.FieldID, field.TypeInt),
@@ -330,7 +330,6 @@ func (gc *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.StoragePolicyID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -514,6 +513,12 @@ func (u *GroupUpsert) SetStoragePolicyID(v int) *GroupUpsert {
 // UpdateStoragePolicyID sets the "storage_policy_id" field to the value that was provided on create.
 func (u *GroupUpsert) UpdateStoragePolicyID() *GroupUpsert {
 	u.SetExcluded(group.FieldStoragePolicyID)
+	return u
+}
+
+// AddStoragePolicyID adds v to the "storage_policy_id" field.
+func (u *GroupUpsert) AddStoragePolicyID(v int) *GroupUpsert {
+	u.Add(group.FieldStoragePolicyID, v)
 	return u
 }
 
@@ -712,6 +717,13 @@ func (u *GroupUpsertOne) ClearSettings() *GroupUpsertOne {
 func (u *GroupUpsertOne) SetStoragePolicyID(v int) *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.SetStoragePolicyID(v)
+	})
+}
+
+// AddStoragePolicyID adds v to the "storage_policy_id" field.
+func (u *GroupUpsertOne) AddStoragePolicyID(v int) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddStoragePolicyID(v)
 	})
 }
 
@@ -1089,6 +1101,13 @@ func (u *GroupUpsertBulk) ClearSettings() *GroupUpsertBulk {
 func (u *GroupUpsertBulk) SetStoragePolicyID(v int) *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.SetStoragePolicyID(v)
+	})
+}
+
+// AddStoragePolicyID adds v to the "storage_policy_id" field.
+func (u *GroupUpsertBulk) AddStoragePolicyID(v int) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddStoragePolicyID(v)
 	})
 }
 

@@ -80,7 +80,7 @@ func (spq *StoragePolicyQuery) QueryGroups() *GroupQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, selector),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, storagepolicy.GroupsTable, storagepolicy.GroupsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, storagepolicy.GroupsTable, storagepolicy.GroupsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(spq.driver.Dialect(), step)
 		return fromU, nil
@@ -534,32 +534,63 @@ func (spq *StoragePolicyQuery) sqlAll(ctx context.Context, hooks ...queryHook) (
 }
 
 func (spq *StoragePolicyQuery) loadGroups(ctx context.Context, query *GroupQuery, nodes []*StoragePolicy, init func(*StoragePolicy), assign func(*StoragePolicy, *Group)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*StoragePolicy)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[int]*StoragePolicy)
+	nids := make(map[int]map[*StoragePolicy]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
 		if init != nil {
-			init(nodes[i])
+			init(node)
 		}
 	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(group.FieldStoragePolicyID)
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(storagepolicy.GroupsTable)
+		s.Join(joinT).On(s.C(group.FieldID), joinT.C(storagepolicy.GroupsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(storagepolicy.GroupsPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(storagepolicy.GroupsPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(predicate.Group(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(storagepolicy.GroupsColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(sql.NullInt64)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := int(values[0].(*sql.NullInt64).Int64)
+				inValue := int(values[1].(*sql.NullInt64).Int64)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*StoragePolicy]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Group](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.StoragePolicyID
-		node, ok := nodeids[fk]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "storage_policy_id" returned %v for node %v`, fk, n.ID)
+			return fmt.Errorf(`unexpected "groups" node returned %v`, n.ID)
 		}
-		assign(node, n)
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

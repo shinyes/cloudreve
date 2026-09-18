@@ -380,6 +380,29 @@ func (m *manager) PatchView(ctx context.Context, uri *fs.URI, view *types.Explor
 	return nil
 }
 
+// GetPreferredPolicy returns the storage policy preferred for the given path,
+// as inherited from its nearest ancestor folder, and the list of policies the
+// owner's group is granted. A preferred policy of 0 means "group default".
+func (m *manager) GetPreferredPolicy(ctx context.Context, uri *fs.URI) (int, []*ent.StoragePolicy, error) {
+	preferred, err := m.fs.GetPreferredPolicyID(ctx, uri)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	policies, err := m.dep.StoragePolicyClient().ListByGroup(ctx, m.user.Edges.Group)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return preferred, policies, nil
+}
+
+// PatchPreferredPolicy sets (or clears, when policyID is 0) the storage policy
+// preferred for the folder at the given path.
+func (m *manager) PatchPreferredPolicy(ctx context.Context, uri *fs.URI, policyID int) error {
+	return m.fs.PatchPreferredPolicy(ctx, uri, policyID)
+}
+
 func getEntityDisplayName(f fs.File, e fs.Entity) string {
 	switch e.Type() {
 	case types.EntityTypeThumbnail:

@@ -38,3 +38,15 @@ tmp/
 .devcontainer/
 cloudreve
 .DS_Store
+
+# Local throwaway instance produced by tests/relocate/run.ps1 - it contains a
+# ~100MB binary and a database, neither of which belongs in version control.
+/run/
+
+# Frontend dependencies and build output. The sources under assets/ are tracked;
+# only the installed packages and the generated bundle are ignored.
+assets/node_modules/
+assets/build/
+
+# Scratch backups created while developing.
+.backup-multipolicy/

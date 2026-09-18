@@ -950,7 +950,7 @@ func HasGroups() predicate.StoragePolicy {
 	return predicate.StoragePolicy(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, GroupsTable, GroupsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, GroupsTable, GroupsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

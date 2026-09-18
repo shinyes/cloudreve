@@ -100,6 +100,24 @@ func ExtractArchive(c *gin.Context) {
 	}
 }
 
+// RelocateFiles creates a task that moves the selected files or folders to
+// another storage policy
+func RelocateFiles(c *gin.Context) {
+	service := ParametersFromContext[*explorer.RelocateWorkflowService](c, explorer.CreateRelocateParamCtx{})
+	resp, err := service.CreateRelocateTask(c)
+	if err != nil {
+		c.JSON(200, serializer.Err(c, err))
+		c.Abort()
+		return
+	}
+
+	if resp != nil {
+		c.JSON(200, serializer.Response{
+			Data: resp,
+		})
+	}
+}
+
 // AnonymousPermLink 文件中转后的永久直链接
 func AnonymousPermLink(download bool) gin.HandlerFunc {
 	return func(c *gin.Context) {

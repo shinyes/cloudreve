@@ -207,14 +207,6 @@ var (
 		Name:       "groups",
 		Columns:    GroupsColumns,
 		PrimaryKey: []*schema.Column{GroupsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "groups_storage_policies_groups",
-				Columns:    []*schema.Column{GroupsColumns[9]},
-				RefColumns: []*schema.Column{StoragePoliciesColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
 	}
 	// MetadataColumns holds the columns for the "metadata" table.
 	MetadataColumns = []*schema.Column{
@@ -526,6 +518,31 @@ var (
 			},
 		},
 	}
+	// GroupStoragePoliciesColumns holds the columns for the "group_storage_policies" table.
+	GroupStoragePoliciesColumns = []*schema.Column{
+		{Name: "group_id", Type: field.TypeInt},
+		{Name: "storage_policy_id", Type: field.TypeInt},
+	}
+	// GroupStoragePoliciesTable holds the schema information for the "group_storage_policies" table.
+	GroupStoragePoliciesTable = &schema.Table{
+		Name:       "group_storage_policies",
+		Columns:    GroupStoragePoliciesColumns,
+		PrimaryKey: []*schema.Column{GroupStoragePoliciesColumns[0], GroupStoragePoliciesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_storage_policies_group_id",
+				Columns:    []*schema.Column{GroupStoragePoliciesColumns[0]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "group_storage_policies_storage_policy_id",
+				Columns:    []*schema.Column{GroupStoragePoliciesColumns[1]},
+				RefColumns: []*schema.Column{StoragePoliciesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		DavAccountsTable,
@@ -545,6 +562,7 @@ var (
 		TasksTable,
 		UsersTable,
 		FileEntitiesTable,
+		GroupStoragePoliciesTable,
 	}
 )
 
@@ -557,7 +575,6 @@ func init() {
 	FilesTable.ForeignKeys[1].RefTable = StoragePoliciesTable
 	FilesTable.ForeignKeys[2].RefTable = UsersTable
 	FsEventsTable.ForeignKeys[0].RefTable = UsersTable
-	GroupsTable.ForeignKeys[0].RefTable = StoragePoliciesTable
 	MetadataTable.ForeignKeys[0].RefTable = FilesTable
 	OauthGrantsTable.ForeignKeys[0].RefTable = OauthClientsTable
 	OauthGrantsTable.ForeignKeys[1].RefTable = UsersTable
@@ -569,4 +586,6 @@ func init() {
 	UsersTable.ForeignKeys[0].RefTable = GroupsTable
 	FileEntitiesTable.ForeignKeys[0].RefTable = FilesTable
 	FileEntitiesTable.ForeignKeys[1].RefTable = EntitiesTable
+	GroupStoragePoliciesTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupStoragePoliciesTable.ForeignKeys[1].RefTable = StoragePoliciesTable
 }

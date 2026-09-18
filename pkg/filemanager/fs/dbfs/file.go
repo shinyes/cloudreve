@@ -223,6 +223,21 @@ func (f *File) View() *types.ExplorerView {
 	return getDefaultView()
 }
 
+// PreferredPolicyID returns the storage policy explicitly preferred for this
+// file or its nearest ancestor folder. 0 means no preference is set anywhere
+// in the chain, so the owner's group default policy applies.
+func (f *File) PreferredPolicyID() int {
+	current := f
+	for current != nil {
+		if current.Model.Props != nil && current.Model.Props.PreferredPolicyID > 0 {
+			return current.Model.Props.PreferredPolicyID
+		}
+		current = current.Parent
+	}
+
+	return 0
+}
+
 // UserRoot return the root file from user's view.
 func (f *File) UserRoot() *File {
 	root := f

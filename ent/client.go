@@ -1361,7 +1361,7 @@ func (c *GroupClient) QueryStoragePolicies(gr *Group) *StoragePolicyQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, id),
 			sqlgraph.To(storagepolicy.Table, storagepolicy.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, group.StoragePoliciesTable, group.StoragePoliciesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.StoragePoliciesTable, group.StoragePoliciesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
 		return fromV, nil
@@ -2585,7 +2585,7 @@ func (c *StoragePolicyClient) QueryGroups(sp *StoragePolicy) *GroupQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(storagepolicy.Table, storagepolicy.FieldID, id),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, storagepolicy.GroupsTable, storagepolicy.GroupsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, storagepolicy.GroupsTable, storagepolicy.GroupsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(sp.driver.Dialect(), step)
 		return fromV, nil

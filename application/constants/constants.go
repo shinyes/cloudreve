@@ -4,9 +4,16 @@ package constants
 
 // BackendVersion 当前后端版本号
 // NOTE: 该版本号同时是数据库 schema 版本标记（见 inventory.InitializeDBClient）。
-// 4.15.0 引入 group_storage_policies 多对多关联与回填补丁，必须递增版本号，
-// 否则已完成 4.14.0 迁移的数据库不会再次进入迁移流程，补丁不会执行。
-var BackendVersion = "4.15.0"
+// 每次发版必须与 git 标签一致：application/statics 会比对内嵌前端 version.json 中的
+// 版本号，不一致则拒绝提供界面。
+//
+// 版本历史：
+//   - 4.15.0 引入 group_storage_policies 多对多关联与回填补丁；
+//   - 4.16.0 加入目录首选存储策略与存储策略间迁移（无新增补丁）。
+//
+// 补丁执行按 Patch.EndVersion 与数据库中已记录的版本比较，因此升级到 4.16.0
+// 不会重跑 4.15.0 的补丁。
+var BackendVersion = "4.16.0"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

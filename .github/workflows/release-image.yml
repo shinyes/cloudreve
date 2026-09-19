@@ -62,20 +62,41 @@ jobs:
           "
 
       # The zip is embedded with //go:embed and unwrapped with fs.Sub(..., "assets/build"),
-      # so every entry needs that exact prefix and forward slashes.
+      # so every entry MUST carry that exact prefix. `zip -r build` from inside assets/
+      # produces "build/..." entries instead, which fails at startup - the archive is
+      # therefore written explicitly rather than left to the zip CLI's path handling.
       - name: Package assets.zip
         run: |
-          mkdir -p application/statics
-          (cd assets && zip -q -r -X ../application/statics/assets.zip build)
           python3 - <<'PY'
+          import os
           import zipfile
-          with zipfile.ZipFile('application/statics/assets.zip') as z:
+
+          root = "assets/build"
+          target = "application/statics/assets.zip"
+          prefix = "assets/build/"
+
+          os.makedirs("application/statics", exist_ok=True)
+
+          written = 0
+          with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
+              for dirpath, _dirnames, filenames in os.walk(root):
+                  for name in filenames:
+                      full = os.path.join(dirpath, name)
+                      # posix separators only: a backslash will not resolve in fs.Sub.
+                      arcname = prefix + os.path.relpath(full, root).replace(os.sep, "/")
+                      z.write(full, arcname)
+                      written += 1
+
+          with zipfile.ZipFile(target) as z:
               names = z.namelist()
-          assert not any('\\' in n for n in names), 'zip entries must use forward slashes'
-          prefixed = [n for n in names if n.startswith('assets/build/')]
-          assert prefixed, 'zip entries must be prefixed with assets/build/'
-          assert 'assets/build/version.json' in names, 'version.json is missing from the bundle'
-          print(f'{len(names)} entries, {len(prefixed)} under assets/build/')
+
+          assert names, "the bundle is empty"
+          assert not any("\\" in n for n in names), "zip entries must use forward slashes"
+          outside = [n for n in names if not n.startswith(prefix)]
+          assert not outside, f"{len(outside)} entries are not under {prefix}: {outside[:3]}"
+          for required in ("assets/build/version.json", "assets/build/index.html"):
+              assert required in names, f"{required} is missing from the bundle"
+          print(f"{len(names)} entries ({written} written), all under {prefix}")
           PY
 
       - name: Upload the bundle for the build jobs

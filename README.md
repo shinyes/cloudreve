@@ -62,6 +62,115 @@ When you're ready to deploy Cloudreve to a production environment, you can refer
 
 Please refer to [Build](https://docs.cloudreve.org/overview/build/) for how to build Cloudreve from source code.
 
+## :bookmark: About this repository (fork)
+
+This is a private fork of `cloudreve/Cloudreve` for internal deployment. **The upstream
+documentation does not describe this fork exactly**; the notes below take precedence.
+
+### Differences from upstream
+
+1. **A user group can be bound to several storage policies** (many-to-many
+   `group_storage_policies`; the old single-policy column is kept but deprecated).
+2. **Per-directory preferred storage policy**: uploads walk the parent chain and land on
+   the chosen policy.
+3. **Files and folders can be relocated between storage policies** (with rollback).
+4. **The frontend sources under `assets/` are committed normally** (upstream keeps them
+   in a git submodule; `.gitmodules` was removed here).
+5. **Releases go through GitHub Actions container images**, not goreleaser or Azure
+   Pipelines.
+
+### Versioning
+
+`BackendVersion` in `application/constants/constants.go` is **both** the database schema
+version marker and the value compared against the embedded frontend's `version.json`.
+**Changing it requires changing all three places, otherwise startup logs
+`Static resource version mismatch`**:
+
+| Where | Purpose |
+|---|---|
+| `application/constants/constants.go` → `BackendVersion` | version embedded in the binary |
+| `assets/build-frontend.ps1` → `$BackendVersion` default | version stamped when packing locally |
+| the git tag | CI overwrites `version.json` from the tag, so it must match the other two |
+
+Tags carry **no `v` prefix** and look like `4.16.0`. This fork claims **minor** versions
+(4.16.0) so it stays distinct from upstream patch releases (4.15.1, 4.15.2, ...) when
+upstream code is merged later.
+
+> Schema patches are gated on `Patch.EndVersion` compared against the versions already
+> recorded in the database (`inventory/migration.go`), so bumping the version alone never
+> re-runs an old patch. Add an entry to `patches` only when a new patch is needed.
+
+### Release procedure
+
+```bash
+# 1. Bump the version in the two source locations listed above.
+# 2. Verify locally, then commit.
+git add -A && git commit -m "release: bump BackendVersion to 4.17.0"
+git push origin main
+
+# 3. Tag and push - this triggers the release.
+git tag -a 4.17.0 -m "Cloudreve 4.17.0 fork release"
+git push origin 4.17.0
+```
+
+Pushing the tag makes `.github/workflows/release-image.yml`:
+
+1. install the frontend dependencies, run `vite build`, stamp `build/version.json` from
+   the tag, and pack `application/statics/assets.zip`;
+2. build a `linux/amd64` + `linux/arm64` image with Buildx and push it to
+   `ghcr.io/shinyes/cloudreve` tagged `<version>`, `latest`, and `v4`;
+3. build each architecture separately and export it with `docker save` + `gzip`,
+   uploading `cloudreve_<version>_linux_amd64.tar.gz` and
+   `cloudreve_<version>_linux_arm64.tar.gz`;
+4. create the GitHub release for the tag and attach both archives.
+
+**A `v` prefix breaks this twice**: `v4.17.0` does not match the trigger pattern
+(`[0-9]+.[0-9]+.[0-9]+`) so nothing runs, and it would not match `version.json` either.
+
+First-time prerequisites, both set in the GitHub web UI: on a private repository the
+default `GITHUB_TOKEN` is read-only, so enable **Read and write permissions** under
+*Settings → Actions → General → Workflow permissions*; and the pushed package starts
+private, so make it public under *Packages → cloudreve → Package settings* if it should
+be pullable without a login.
+
+### Building and testing locally
+
+`application/statics/assets.zip` is **gitignored** (CI generates it), so a fresh clone
+cannot `go build` until the frontend is packed - `//go:embed` fails on the missing file:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion 4.16.0
+go build -o cloudreve.exe .
+```
+
+```powershell
+# Unit tests: encryption metadata contract, relocation encryption matrix.
+go test ./inventory/ ./pkg/filemanager/manager/
+
+# End-to-end: three suites, each on its own throwaway instance.
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\relocate\run.ps1
+```
+
+Do **not** use `npm run build-prod` for the frontend: it runs `tsc` first and the
+repository carries pre-existing type errors unrelated to any given change. Both CI and
+local builds use `npm run build`.
+
+### Relationship with upstream (important)
+
+This fork **never publishes anything upstream**: no pull requests, no branches, no tags.
+See [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md).
+
+- no remote pointing at upstream exists in this repository;
+- `.githooks/pre-push` refuses a push to an upstream URL (enable per clone with
+  `git config core.hooksPath .githooks`);
+- `.github/workflows/upstream-guard.yml` checks the invariant on every push and PR.
+
+To reuse upstream code, fetch it without registering a pushable remote:
+
+```bash
+git fetch https://github.com/cloudreve/Cloudreve.git master:upstream-latest
+```
+
 ## :rocket: Contributing
 
 If you're interested in contributing to Cloudreve, please refer to [Contributing](https://docs.cloudreve.org/api/contributing/) for how to contribute to Cloudreve.

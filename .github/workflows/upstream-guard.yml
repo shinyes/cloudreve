@@ -1,0 +1,70 @@
+name: Upstream guard
+
+# This fork must never publish to cloudreve/Cloudreve. The pre-push hook stops a push
+# from a configured clone, but it lives in local git config and cannot be enforced for
+# every clone, so the invariant is also checked here on every push and pull request.
+#
+# See UPSTREAM_POLICY.md for the full policy and the supported ways to reuse upstream
+# code without registering a push target.
+on:
+  push:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  no-upstream-target:
+    name: Reject upstream push targets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fail if any remote points at upstream
+        run: |
+          set -euo pipefail
+
+          upstream="cloudreve/cloudreve"
+          fail=0
+
+          # Inspect every configured remote URL, including push-specific overrides.
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            key="${line%% *}"
+            value="${line#* }"
+            lower_key=$(printf '%s' "$key" | tr '[:upper:]' '[:lower:]')
+            lower_value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+
+            case "$lower_key" in
+              remote.*.url|remote.*.pushurl) ;;
+              *) continue ;;
+            esac
+
+            if printf '%s' "$lower_value" | grep -q "$upstream"; then
+              echo "::error::$key points at the upstream repository ($value)."
+              echo "This fork must never push to upstream; see UPSTREAM_POLICY.md."
+              fail=1
+            fi
+          done < <(git config --local --list || true)
+
+          if [ "$fail" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo "No remote points at upstream."
+
+      - name: Fail if a pull request targets upstream
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+        run: |
+          set -euo pipefail
+          lower=$(printf '%s' "$BASE_REPO" | tr '[:upper:]' '[:lower:]')
+          if [ "$lower" = "cloudreve/cloudreve" ]; then
+            echo "::error::This pull request targets upstream ($BASE_REPO). Close it: this fork never publishes upstream."
+            exit 1
+          fi
+          echo "Pull request targets $BASE_REPO, not upstream."

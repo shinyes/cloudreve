@@ -492,7 +492,8 @@
     "relocateSelectTarget": "Ziel-Speicherrichtlinie wählen",
     "relocateSummary": "Daten von {{count}} Objekt(en) ({{size}}) auf die gewählte Richtlinie verschieben",
     "relocateHint": "Jede Datei wird als Ganzes verschoben: Schlägt eine fehl, wird abgebrochen und die Datei bleibt unverändert.",
-    "relocateNoTarget": "Ihre Gruppe hat keine weitere Speicherrichtlinie."
+    "relocateNoTarget": "Ihre Gruppe hat keine weitere Speicherrichtlinie.",
+    "relocateCurrentPolicy": "Aktuelle Speicherrichtlinie: {{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "Passwort in Link einbeziehen",

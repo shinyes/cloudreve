@@ -457,7 +457,8 @@
     "relocateSelectTarget": "Select a target storage policy",
     "relocateSummary": "Move the data of {{count}} item(s) ({{size}}) to the selected policy",
     "relocateHint": "Each file is moved as a whole: if any file fails the task stops and that file stays where it was, so data is never split across policies.",
-    "relocateNoTarget": "Your group has no other storage policy to relocate to."
+    "relocateNoTarget": "Your group has no other storage policy to relocate to.",
+    "relocateCurrentPolicy": "Current storage policy: {{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "Include password in share link",

@@ -457,7 +457,8 @@
     "relocateSelectTarget": "请选择目标存储策略",
     "relocateSummary": "将 {{count}} 个对象（共 {{size}}）的数据转移到所选策略",
     "relocateHint": "文件将逐个完整迁移：任一文件失败即中止并保持原状，不会出现一半在新策略、一半在旧策略的情况。",
-    "relocateNoTarget": "当前用户组没有其他可用的存储策略，无法转移。"
+    "relocateNoTarget": "当前用户组没有其他可用的存储策略，无法转移。",
+    "relocateCurrentPolicy": "当前存储策略：{{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "在链接中包含密码",

@@ -2,11 +2,19 @@ name: Release container images
 
 # Tags matching x.y.z (for example 4.16.0) publish:
 #   * a multi-arch image (linux/amd64 + linux/arm64) to ghcr.io,
-#   * one compressed `docker save` archive per architecture on the GitHub release.
+#   * one compressed `docker save` archive per architecture attached to the release.
 #
 # The tag doubles as the reported backend version, so it must not carry a leading
 # "v": application/statics compares the version embedded in the frontend bundle
 # against constants.BackendVersion and refuses to serve a mismatched UI.
+#
+# This workflow deliberately uses NO `actions/upload-artifact`. Artifact storage is an
+# account-wide quota of a few hundred megabytes, while two image archives plus the
+# frontend bundle are well over 100MB per run, so a single run could consume the whole
+# allowance and make every later run fail with "Artifact storage quota has been hit"
+# before any build step mattered. Release assets are outside that quota, so the frontend
+# bundle is built inside the job that needs it and the archives are attached to the
+# release directly from the job that produced them.
 on:
   push:
     tags:
@@ -22,9 +30,35 @@ permissions:
   contents: read
 
 jobs:
-  frontend:
-    name: Build embedded frontend
+  # The archives are attached to the release straight from the job that builds them
+  # (release assets are outside the Actions artifact quota). `gh release upload` needs
+  # the release to exist first, so it is created here as a draft: if a build later
+  # fails, the tag is left with an unpublished draft instead of a half-empty release.
+  ensure-release:
+    name: Create the draft release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create the release if it does not exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists"
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" \
+              --notes "Built from tag $GITHUB_REF_NAME."
+            echo "created draft release $GITHUB_REF_NAME"
+          fi
+
+  image:
+    name: Publish multi-arch image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Check out the tag
         uses: actions/checkout@v4
@@ -99,30 +133,6 @@ jobs:
           print(f"{len(names)} entries ({written} written), all under {prefix}")
           PY
 
-      - name: Upload the bundle for the build jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: assets-zip
-          path: application/statics/assets.zip
-          retention-days: 1
-
-  image:
-    name: Publish multi-arch image
-    needs: frontend
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Check out the tag
-        uses: actions/checkout@v4
-
-      - name: Fetch the embedded frontend
-        uses: actions/download-artifact@v4
-        with:
-          name: assets-zip
-          path: application/statics
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -161,8 +171,13 @@ jobs:
 
   archives:
     name: Build downloadable archives
-    needs: frontend
+    # Must wait for the draft release: the archives are attached from here, and
+    # `gh release upload` has nothing to attach to until it exists.
+    needs: ensure-release
     runs-on: ubuntu-latest
+    permissions:
+      # Writing release assets needs contents: write on the default token.
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -175,11 +190,54 @@ jobs:
       - name: Check out the tag
         uses: actions/checkout@v4
 
-      - name: Fetch the embedded frontend
-        uses: actions/download-artifact@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
-          name: assets-zip
-          path: application/statics
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+          cache-dependency-path: assets/yarn.lock
+
+      - name: Install frontend dependencies
+        working-directory: assets
+        run: yarn install --frozen-lockfile --network-timeout 1000000
+
+      - name: Build frontend bundle
+        working-directory: assets
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
+
+      - name: Stamp the frontend version
+        run: |
+          node -e "
+            const fs = require('fs');
+            const version = process.env.GITHUB_REF_NAME;
+            fs.writeFileSync('assets/build/version.json', JSON.stringify({ name: 'cloudreve-frontend', version }));
+          "
+
+      - name: Package assets.zip
+        run: |
+          python3 - <<'PY'
+          import os
+          import zipfile
+
+          root = "assets/build"
+          target = "application/statics/assets.zip"
+          prefix = "assets/build/"
+
+          os.makedirs("application/statics", exist_ok=True)
+
+          with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
+              for dirpath, _dirnames, filenames in os.walk(root):
+                  for name in filenames:
+                      full = os.path.join(dirpath, name)
+                      arcname = prefix + os.path.relpath(full, root).replace(os.sep, "/")
+                      z.write(full, arcname)
+
+          with zipfile.ZipFile(target) as z:
+              names = z.namelist()
+          assert names and all(n.startswith(prefix) for n in names), "bad assets.zip layout"
+          PY
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
@@ -211,42 +269,30 @@ jobs:
           ls -lh "${name}.tar.gz"
           echo "ARCHIVE=${name}.tar.gz" >> "$GITHUB_ENV"
 
-      # These archives are only read by the release job seconds later, so they must not
-      # occupy the account-wide artifact quota for a week. Actions artifact storage is a
-      # shared quota: with two ~100MB image archives per run, a longer retention is
-      # enough to block every later run with "Artifact storage quota has been hit".
-      - name: Upload the archive as a workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: image-archive-${{ matrix.suffix }}
-          path: ${{ env.ARCHIVE }}
-          retention-days: 1
+      # Straight onto the release: no artifact storage involved, and the file ends up
+      # where users actually look for it. --clobber keeps a re-run idempotent, and
+      # ensure-release guarantees the release already exists.
+      - name: Attach the archive to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" "$ARCHIVE" --clobber
 
   release:
-    name: Attach archives to the release
+    name: Publish the release
     needs: [image, archives]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Fetch the archives
-        uses: actions/download-artifact@v4
-        with:
-          pattern: image-archive-*
-          merge-multiple: true
-          path: archives
-
-      - name: List what will be published
-        run: ls -lh archives
-
-      # The release has no source archive to depend on: this step owns creating it.
-      # `contents: write` lets the default token create it, so no extra secret is
-      # needed unless the repository forbids that.
-      - name: Publish the release
+      # The draft was created by ensure-release and the assets were attached by the
+      # archives job. This step fills in the notes and publishes it, so a failure
+      # earlier leaves an unpublished draft rather than a release that looks complete.
+      - name: Publish with generated notes
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
+          draft: false
           generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: archives/*.tar.gz

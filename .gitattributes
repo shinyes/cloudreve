@@ -3,6 +3,11 @@
 *.sh text eol=lf
 *.ps1 text eol=crlf
 
+# Git hooks have no extension and are run by sh, so they need the same protection:
+# without this a Windows checkout converts them to CRLF and every push fails with a
+# shell syntax error.
+.githooks/* text eol=lf
+
 # Files whose byte content matters to a build or a runtime comparison.
 *.yml text eol=lf
 *.yaml text eol=lf

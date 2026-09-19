@@ -124,6 +124,12 @@ try {
   Check 'zero residue on other policies' ($after -match 'POLICY 2 => 5 entities' -and $after -notmatch 'POLICY 1 =>' -and $after -notmatch 'POLICY 3 =>') "db: $after"
   Check 'all entities dropped key material after decrypting move' (([regex]::Matches($after, 'encrypt_metadata=present')).Count -eq 0) "db: $after"
 
+  # The file-level storage policy drives what the explorer and the admin panel report,
+  # so it has to advance together with the entities. A stale value is what made a
+  # relocated file still show its old policy in the admin file list.
+  $filePolicies = & go run ./tools/relocate-check -db $db -file-policies 2>&1 | Out-String
+  Check 'files report the target policy' ($filePolicies -notmatch 'policy=1') "file policies: $filePolicies"
+
   # --- content must survive the move, including the formerly encrypted file ---
   $a = DownloadText $UH 'cloudreve://my/tree/a.txt'
   Check 'plain file content intact' ($a -eq 'alpha') "got '$a'"

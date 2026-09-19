@@ -812,7 +812,19 @@ func (f *fileClient) SetPrimaryEntity(ctx context.Context, file *ent.File, entit
 // Because the entity row is reused, files sharing this blob keep sharing it, and
 // version chains need no repair.
 func (f *fileClient) RelocateEntity(ctx context.Context, entity *ent.Entity, newSource string, policyID int, encryptMetadata *types.EncryptMetadata, setEncryptMetadata bool) error {
-	stm := f.client.Entity.UpdateOne(entity).
+	// Both writes must succeed together: the entity says where the blob lives, the file
+	// says which policy it belongs to. Advancing one without the other is what made a
+	// relocated file keep reporting the policy it was moved away from.
+	//
+	// Everything is built from tx, never from f.client: a statement built on the
+	// non-transactional client would try to take its own connection while this
+	// transaction holds one, which deadlocks the whole process rather than erroring.
+	tx, err := f.client.Tx(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start a transaction: %w", err)
+	}
+
+	stm := tx.Entity.UpdateOneID(entity.ID).
 		SetSource(newSource).
 		SetStoragePolicyID(policyID)
 
@@ -832,7 +844,22 @@ func (f *fileClient) RelocateEntity(ctx context.Context, entity *ent.Entity, new
 	}
 
 	if err := stm.Exec(ctx); err != nil {
+		_ = tx.Rollback()
 		return fmt.Errorf("failed to relocate entity %d: %w", entity.ID, err)
+	}
+
+	// The file carries its own storage policy id, used to decide where uploads into a
+	// folder land and which policy the explorer and the admin panel report.
+	if err := tx.File.Update().
+		Where(file.PrimaryEntityEQ(entity.ID)).
+		SetStoragePolicyFiles(policyID).
+		Exec(ctx); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("failed to update the storage policy of the file holding entity %d: %w", entity.ID, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit the relocation of entity %d: %w", entity.ID, err)
 	}
 
 	return nil

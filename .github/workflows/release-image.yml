@@ -211,12 +211,16 @@ jobs:
           ls -lh "${name}.tar.gz"
           echo "ARCHIVE=${name}.tar.gz" >> "$GITHUB_ENV"
 
+      # These archives are only read by the release job seconds later, so they must not
+      # occupy the account-wide artifact quota for a week. Actions artifact storage is a
+      # shared quota: with two ~100MB image archives per run, a longer retention is
+      # enough to block every later run with "Artifact storage quota has been hit".
       - name: Upload the archive as a workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: image-archive-${{ matrix.suffix }}
           path: ${{ env.ARCHIVE }}
-          retention-days: 7
+          retention-days: 1
 
   release:
     name: Attach archives to the release

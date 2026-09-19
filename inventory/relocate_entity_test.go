@@ -5,10 +5,83 @@ import (
 	"testing"
 
 	"github.com/cloudreve/Cloudreve/v4/ent"
+	"github.com/cloudreve/Cloudreve/v4/ent/file"
 	"github.com/cloudreve/Cloudreve/v4/inventory/types"
 	"github.com/cloudreve/Cloudreve/v4/pkg/conf"
 	"github.com/cloudreve/Cloudreve/v4/pkg/hashid"
 )
+
+// TestRelocateEntityUpdatesFilePolicy pins that a relocation also advances the storage
+// policy recorded on the owning file. The explorer and the admin file panel read that
+// file-level field, so leaving it behind makes a relocated file keep reporting the
+// policy it was moved away from even though its entities are already correct.
+func TestRelocateEntityUpdatesFilePolicy(t *testing.T) {
+	client, ctx := newTestClient(t)
+	source := newPolicy(t, client, ctx, "source")
+	target := newPolicy(t, client, ctx, "target")
+	entity := newRelocateTargetEntity(t, client, ctx, source)
+
+	owner, err := client.File.Query().Where(file.PrimaryEntityEQ(entity.ID)).Only(ctx)
+	if err != nil {
+		t.Fatalf("failed to load the owning file: %s", err)
+	}
+	if _, err := client.File.UpdateOneID(owner.ID).SetStoragePolicyFiles(source.ID).Save(ctx); err != nil {
+		t.Fatalf("failed to seed the file storage policy: %s", err)
+	}
+
+	fc := newRelocateFileClient(t, client)
+	if err := fc.RelocateEntity(ctx, entity, "uploads/new/path.txt", target.ID, nil, true); err != nil {
+		t.Fatalf("RelocateEntity returned an error: %s", err)
+	}
+
+	moved, err := client.File.Get(ctx, owner.ID)
+	if err != nil {
+		t.Fatalf("failed to reload the file: %s", err)
+	}
+	if moved.StoragePolicyFiles != target.ID {
+		t.Errorf("file storage policy = %d, want %d", moved.StoragePolicyFiles, target.ID)
+	}
+}
+
+// Only the file that actually owns the relocated blob may be updated.
+func TestRelocateEntityLeavesOtherFilesAlone(t *testing.T) {
+	client, ctx := newTestClient(t)
+	source := newPolicy(t, client, ctx, "source")
+	target := newPolicy(t, client, ctx, "target")
+	entity := newRelocateTargetEntity(t, client, ctx, source)
+
+	owner, err := client.File.Query().Where(file.PrimaryEntityEQ(entity.ID)).Only(ctx)
+	if err != nil {
+		t.Fatalf("failed to load the owning file: %s", err)
+	}
+	if _, err := client.File.UpdateOneID(owner.ID).SetStoragePolicyFiles(source.ID).Save(ctx); err != nil {
+		t.Fatalf("failed to seed the file storage policy: %s", err)
+	}
+
+	// A different file that does not point at this entity.
+	other, err := client.File.Create().
+		SetName("unrelated.txt").
+		SetType(int(types.FileTypeFile)).
+		SetOwnerID(owner.OwnerID).
+		SetStoragePolicyFiles(source.ID).
+		Save(ctx)
+	if err != nil {
+		t.Fatalf("failed to create the unrelated file: %s", err)
+	}
+
+	fc := newRelocateFileClient(t, client)
+	if err := fc.RelocateEntity(ctx, entity, "uploads/new/path.txt", target.ID, nil, true); err != nil {
+		t.Fatalf("RelocateEntity returned an error: %s", err)
+	}
+
+	untouched, err := client.File.Get(ctx, other.ID)
+	if err != nil {
+		t.Fatalf("failed to reload the unrelated file: %s", err)
+	}
+	if untouched.StoragePolicyFiles != source.ID {
+		t.Errorf("an unrelated file was modified: policy = %d, want %d", untouched.StoragePolicyFiles, source.ID)
+	}
+}
 
 // newRelocateTargetEntity creates the minimal object graph an entity needs (owner,
 // file, entity) so RelocateEntity is exercised against a real database row.
@@ -31,14 +104,9 @@ func newRelocateTargetEntity(t *testing.T, client *ent.Client, ctx context.Conte
 		t.Fatalf("failed to create user: %s", err)
 	}
 
-	if _, err := client.File.Create().
-		SetName("relocate.txt").
-		SetType(int(types.FileTypeFile)).
-		SetOwnerID(user.ID).
-		Save(ctx); err != nil {
-		t.Fatalf("failed to create file: %s", err)
-	}
-
+	// The entity is created first so the file can be linked to it through the
+	// file_entities edge and marked as its primary entity: a relocation addresses the
+	// file via its primary entity, so an unlinked file would not be found.
 	entity, err := client.Entity.Create().
 		SetType(int(types.EntityTypeVersion)).
 		SetSource("uploads/old/path.txt").
@@ -48,6 +116,17 @@ func newRelocateTargetEntity(t *testing.T, client *ent.Client, ctx context.Conte
 		Save(ctx)
 	if err != nil {
 		t.Fatalf("failed to create entity: %s", err)
+	}
+
+	if _, err := client.File.Create().
+		SetName("relocate.txt").
+		SetType(int(types.FileTypeFile)).
+		SetOwnerID(user.ID).
+		SetPrimaryEntity(entity.ID).
+		SetStoragePolicyFiles(policy.ID).
+		AddEntityIDs(entity.ID).
+		Save(ctx); err != nil {
+		t.Fatalf("failed to create file: %s", err)
 	}
 
 	return entity

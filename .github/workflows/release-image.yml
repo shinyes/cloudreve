@@ -40,15 +40,19 @@ jobs:
     permissions:
       contents: write
     steps:
+      # No checkout here: the job only talks to the API, and passing --repo explicitly
+      # is what makes that possible. Without it gh tries to resolve the repository from
+      # a git remote and fails with "not a git repository".
       - name: Create the release if it does not exist
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "release $GITHUB_REF_NAME already exists"
           else
-            gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" \
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --draft --title "$GITHUB_REF_NAME" \
               --notes "Built from tag $GITHUB_REF_NAME."
             echo "created draft release $GITHUB_REF_NAME"
           fi
@@ -277,7 +281,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release upload "$GITHUB_REF_NAME" "$ARCHIVE" --clobber
+          gh release upload "$GITHUB_REF_NAME" "$ARCHIVE" \
+            --repo "$GITHUB_REPOSITORY" --clobber
 
   release:
     name: Publish the release

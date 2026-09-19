@@ -40,9 +40,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      # No checkout here: the job only talks to the API, and passing --repo explicitly
-      # is what makes that possible. Without it gh tries to resolve the repository from
-      # a git remote and fails with "not a git repository".
+      # No checkout here: the job only talks to the API, and passing --repo explicitly is
+      # what makes that possible (otherwise gh resolves the repository from a git remote
+      # and fails with "not a git repository").
+      #
+      # --verify-tag is required for the same reason: unable to see the tag in a work
+      # tree, gh would otherwise create the release under a generated name such as
+      # "untagged-1a2b3c" instead of the tag that triggered this run.
       - name: Create the release if it does not exist
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,7 +56,7 @@ jobs:
             echo "release $GITHUB_REF_NAME already exists"
           else
             gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-              --draft --title "$GITHUB_REF_NAME" \
+              --verify-tag --draft --title "$GITHUB_REF_NAME" \
               --notes "Built from tag $GITHUB_REF_NAME."
             echo "created draft release $GITHUB_REF_NAME"
           fi

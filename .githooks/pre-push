@@ -1,0 +1,76 @@
+#!/bin/sh
+# Refuses pushes that could reach the upstream Cloudreve repository.
+#
+# This fork is never meant to publish anything upstream: no pull requests, no
+# branches, no tags. A push is the only local action that could create one, so it is
+# blocked here rather than relied on to be remembered.
+#
+# Enable per clone with:  git config core.hooksPath .githooks
+#
+# git invokes a pre-push hook as: pre-push <remote-name> <remote-url>
+# When the destination was given as a URL, <remote-name> is that URL and <remote-url>
+# is "."; when a named remote was used, <remote-url> is the URL to push to. Both
+# arguments are therefore checked, and a named remote is additionally resolved through
+# its pushurl so an aliased remote cannot slip past.
+
+upstream_path="cloudreve/cloudreve"
+
+remote_name="${1:-}"
+remote_url="${2:-}"
+
+is_upstream() {
+  # Normalise separators as well as case: remote URLs use "/" but a local path
+  # destination on Windows uses "\", and both must be caught.
+  lower=$(printf '%s' "$1" | tr '[:upper:]\\' '[:lower:]/')
+  pattern=$(printf '%s' "$upstream_path" | tr '[:upper:]' '[:lower:]')
+  case "$lower" in
+    *"$pattern"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+check_url() {
+  [ -z "$1" ] && return 0
+  # "." is the placeholder git passes for a URL destination; not worth resolving.
+  [ "$1" = "." ] && return 0
+  if is_upstream "$1"; then
+    cat >&2 <<EOF
+push refused: "$1" resolves to the upstream Cloudreve repository.
+
+This fork must never publish to upstream - no pull requests, no branches, no tags.
+If you need upstream code, fetch it without adding a push target:
+
+    git fetch https://github.com/cloudreve/Cloudreve.git master:upstream-latest
+
+To override once (and only if you are certain), bypass the hook:
+
+    git push --no-verify <destination> <ref>
+EOF
+    exit 1
+  fi
+}
+
+# 1. The destination git actually reports.
+check_url "$remote_name"
+check_url "$remote_url"
+
+# 2. If a named remote was used, resolve every URL it could push to. This catches a
+#    remote whose fetch URL looks innocent but whose pushurl points upstream.
+if [ -n "$remote_name" ] && [ "$remote_name" != "." ]; then
+  check_url "$(git remote get-url --push "$remote_name" 2>/dev/null || true)"
+  check_url "$(git config --get "remote.$remote_name.url" 2>/dev/null || true)"
+  check_url "$(git config --get "remote.$remote_name.pushurl" 2>/dev/null || true)"
+
+  # Warn when pushing somewhere other than this fork, so a typo is visible even when
+  # the destination is not upstream itself.
+  dest=$(git remote get-url --push "$remote_name" 2>/dev/null || true)
+  case "$(printf '%s' "$dest" | tr '[:upper:]' '[:lower:]')" in
+    *shinyes/cloudreve*) ;;
+    *)
+      echo "push note: remote '$remote_name' -> $dest" >&2
+      echo "push note: this fork is pushed to origin (shinyes/cloudreve) only." >&2
+      ;;
+  esac
+fi
+
+exit 0

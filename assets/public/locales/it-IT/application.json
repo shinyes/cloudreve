@@ -492,7 +492,8 @@
     "relocateSelectTarget": "Seleziona una policy di destinazione",
     "relocateSummary": "Sposta i dati di {{count}} elemento/i ({{size}}) nella policy scelta",
     "relocateHint": "Ogni file viene spostato per intero: in caso di errore la attività si ferma e il file resta invariato.",
-    "relocateNoTarget": "Il tuo gruppo non ha altre policy di archiviazione."
+    "relocateNoTarget": "Il tuo gruppo non ha altre policy di archiviazione.",
+    "relocateCurrentPolicy": "Policy di archiviazione attuale: {{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "Includi password nel link di condivisione",

@@ -32,8 +32,10 @@ const RelocateDialog = () => {
     [files],
   );
 
-  // A policy is only a no-op target when EVERY selected item already lives on it;
-  // a mixed selection must still be able to move onto any of those policies.
+  // The policy the selection already lives on is never offered as a target: moving
+  // data onto the policy it is already on does nothing. For a mixed selection only the
+  // policy that ALL of it already lives on is a no-op, and the rest stay available so
+  // the selection can be consolidated onto one of them.
   const candidates = useMemo(
     () =>
       policies.filter((p) => {
@@ -47,10 +49,9 @@ const RelocateDialog = () => {
 
   const totalSize = useMemo(() => (files ?? []).reduce((sum, f) => sum + (f.size ?? 0), 0), [files]);
 
-  // Pre-select the policy the selection currently lives on, so the dialog opens
-  // showing the current state instead of an empty field. For a mixed selection the
-  // most common policy wins.
-  const currentPolicy = useMemo(() => {
+  // Reported next to the picker so the current location stays visible without being
+  // selectable. With a mixed selection the most common policy is shown.
+  const currentPolicyName = useMemo(() => {
     const counts = new Map<string, number>();
     for (const id of currentPolicyIDs) {
       counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -65,8 +66,8 @@ const RelocateDialog = () => {
       }
     }
 
-    return best;
-  }, [currentPolicyIDs]);
+    return policies.find((p) => p.id === best)?.name ?? "";
+  }, [currentPolicyIDs, policies]);
 
   useEffect(() => {
     if (!open) {
@@ -77,10 +78,11 @@ const RelocateDialog = () => {
     dispatch(getAvailablePolicies({}))
       .then((res) => {
         setPolicies(res.policies ?? []);
-        setTarget(currentPolicy);
+        // Nothing is pre-selected: every offered policy is a real change of location.
+        setTarget("");
       })
       .finally(() => setLoading(false));
-  }, [open, dispatch, currentPolicy]);
+  }, [open, dispatch]);
 
   const onClose = useCallback(() => {
     dispatch(closeRelocateDialog());
@@ -127,6 +129,11 @@ const RelocateDialog = () => {
               ))}
             </DenseSelect>
             <Box sx={{ mt: 2 }}>
+              {currentPolicyName && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  {t("application:fileManager.relocateCurrentPolicy", { policy: currentPolicyName })}
+                </Typography>
+              )}
               <Typography variant="body2" color="text.secondary">
                 {t("application:fileManager.relocateSummary", {
                   count: files?.length ?? 0,

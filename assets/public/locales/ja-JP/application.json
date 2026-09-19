@@ -457,7 +457,8 @@
     "relocateSelectTarget": "対象のストレージポリシーを選択",
     "relocateSummary": "{{count}} 件（{{size}}）のデータを選択したポリシーへ移動します",
     "relocateHint": "各ファイルはまとめて移動します。失敗した場合は中止され、元の状態が保たれます。",
-    "relocateNoTarget": "所属グループに他のストレージポリシーがありません。"
+    "relocateNoTarget": "所属グループに他のストレージポリシーがありません。",
+    "relocateCurrentPolicy": "現在のストレージポリシー：{{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "共有リンクにパスワードを含める",

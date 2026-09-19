@@ -492,7 +492,8 @@
     "relocateSelectTarget": "대상 저장 정책 선택",
     "relocateSummary": "{{count}}개 항목({{size}})의 데이터를 선택한 정책으로 이동합니다",
     "relocateHint": "각 파일은 통째로 이동합니다. 실패하면 중단되고 원래 상태가 유지됩니다.",
-    "relocateNoTarget": "소속 그룹에 다른 저장 정책이 없습니다."
+    "relocateNoTarget": "소속 그룹에 다른 저장 정책이 없습니다.",
+    "relocateCurrentPolicy": "현재 저장 정책: {{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "공유 링크에 비밀번호 포함",

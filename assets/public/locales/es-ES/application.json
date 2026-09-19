@@ -492,7 +492,8 @@
     "relocateSelectTarget": "Seleccione una política de destino",
     "relocateSummary": "Mover los datos de {{count}} elemento(s) ({{size}}) a la política elegida",
     "relocateHint": "Cada archivo se mueve por completo: si alguno falla, la tarea se detiene y el archivo no cambia.",
-    "relocateNoTarget": "Su grupo no tiene otra política de almacenamiento."
+    "relocateNoTarget": "Su grupo no tiene otra política de almacenamiento.",
+    "relocateCurrentPolicy": "Política de almacenamiento actual: {{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "Incluir contraseña en enlace compartido",

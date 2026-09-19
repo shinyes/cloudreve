@@ -457,7 +457,8 @@
     "relocateSelectTarget": "請選擇目標儲存策略",
     "relocateSummary": "將 {{count}} 個物件（共 {{size}}）的資料轉移到所選策略",
     "relocateHint": "檔案將逐個完整遷移：任一檔案失敗即中止並保持原狀。",
-    "relocateNoTarget": "目前使用者群組沒有其他可用的儲存策略。"
+    "relocateNoTarget": "目前使用者群組沒有其他可用的儲存策略。",
+    "relocateCurrentPolicy": "目前儲存策略：{{policy}}"
   },
   "modals": {
     "includePasswordInShareLink": "在連結中包含密碼",

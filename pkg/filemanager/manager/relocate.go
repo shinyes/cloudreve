@@ -212,6 +212,11 @@ func (m *manager) relocateOneEntity(ctx context.Context, file fs.File, entity fs
 
 	req := &fs.UploadRequest{
 		Props: &fs.UploadProps{
+			// Uri is not optional for every driver: the S3 driver derives the content
+			// type from the file name when no MimeType is set, and dereferences it
+			// unguarded. Leaving it nil therefore panicked on every relocation onto an
+			// S3 policy while local policies (which ignore Uri) worked fine.
+			Uri:      file.Uri(false),
 			Size:     entity.Size(),
 			SavePath: newSavePath,
 		},

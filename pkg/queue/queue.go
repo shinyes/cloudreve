@@ -230,7 +230,10 @@ func (q *queue) work(t Task) {
 		q.metric.DecBusyWorker()
 		e := recover()
 		if e != nil {
-			l.Error("Panic error in queue %q: %v", q.name, e)
+			// The stack is what makes a panic actionable: the message alone says a nil
+			// pointer was dereferenced but not where, and the goroutine that ran the
+			// task is gone by the time anyone looks.
+			l.Error("Panic error in queue %q: %v\n%s", q.name, e, debug.Stack())
 			t.OnError(fmt.Errorf("panic error: %v", e), time.Since(timeIterationStart))
 
 			_ = q.transitStatus(ctx, t, task.StatusError)

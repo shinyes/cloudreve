@@ -208,7 +208,7 @@ func (handler *Driver) Put(ctx context.Context, file *fs.UploadRequest) error {
 	})
 
 	mimeType := file.Props.MimeType
-	if mimeType == "" {
+	if mimeType == "" && file.Props.Uri != nil {
 		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 
@@ -345,7 +345,7 @@ func (handler *Driver) Token(ctx context.Context, uploadSession *fs.UploadSessio
 	uploadSession.Callback = routes.MasterSlaveCallbackUrl(siteURL, types.PolicyTypeS3, uploadSession.Props.UploadSessionID, uploadSession.CallbackSecret).String()
 
 	mimeType := file.Props.MimeType
-	if mimeType == "" {
+	if mimeType == "" && file.Props.Uri != nil {
 		mimeType = handler.mime.TypeByName(file.Props.Uri.Name())
 	}
 

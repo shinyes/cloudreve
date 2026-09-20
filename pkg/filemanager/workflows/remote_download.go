@@ -73,8 +73,11 @@ const (
 
 	SummaryKeySrcMultiple    = "src_multiple"
 	SummaryKeySrcDstPolicyID = "dst_policy_id"
-	SummaryKeyFailed         = "failed"
-	SummaryKeyTotal          = "total"
+	// SummaryKeySrcDstPolicy carries the resolved name of that policy, so a task title
+	// can name it without the client having to look the id up.
+	SummaryKeySrcDstPolicy = "dst_policy_name"
+	SummaryKeyFailed       = "failed"
+	SummaryKeyTotal        = "total"
 )
 
 func init() {

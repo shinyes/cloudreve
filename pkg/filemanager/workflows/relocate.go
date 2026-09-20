@@ -38,6 +38,7 @@ type (
 	RelocateTaskState struct {
 		Uris          []string          `json:"uris,omitempty"`
 		DstPolicyID   int               `json:"dst_policy_id,omitempty"`
+		DstPolicyName string            `json:"dst_policy_name,omitempty"`
 		Phase         RelocateTaskPhase `json:"phase,omitempty"`
 		TotalFiles    int               `json:"total_files,omitempty"`
 		TotalSize     int64             `json:"total_size,omitempty"`
@@ -78,6 +79,15 @@ func NewRelocateTask(ctx context.Context, uris []string, dstPolicyID int) (queue
 		Phase:       RelocateTaskPhaseNotStarted,
 	}
 
+	// Record the policy name with the task. The task title has to name the target, and a
+	// name resolved from the client's policy cache is only as reliable as that cache
+	// being populated, which it is not by default.
+	if dep := dependency.FromContext(ctx); dep != nil && dstPolicyID > 0 {
+		if policy, err := dep.StoragePolicyClient().GetPolicyByID(ctx, dstPolicyID); err == nil {
+			state.DstPolicyName = policy.Name
+		}
+	}
+
 	stateBytes, err := json.Marshal(state)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal state: %w", err)
@@ -102,23 +112,37 @@ func NewRelocateTask(ctx context.Context, uris []string, dstPolicyID int) (queue
 }
 
 func NewRelocateTaskFromModel(task *ent.Task) queue.Task {
-	return &RelocateTask{
+	t := &RelocateTask{
 		DBTask: &queue.DBTask{
 			Task: task,
 		},
 	}
+
+	// Restore the state here rather than only in Do(): the queue builds these tasks to
+	// answer list requests, and Summarize runs for every task in a list. With a nil
+	// state it reports empty props, which is why a relocate task showed no target policy
+	// and an empty title until it happened to execute again.
+	state := &RelocateTaskState{}
+	if err := json.Unmarshal([]byte(task.PrivateState), state); err == nil {
+		t.state = state
+	}
+
+	return t
 }
 
 func (m *RelocateTask) Do(ctx context.Context) (task.Status, error) {
 	dep := dependency.FromContext(ctx)
 	m.l = dep.Logger()
 
-	// Restore state from the persisted task.
-	state := &RelocateTaskState{}
-	if err := json.Unmarshal([]byte(m.State()), state); err != nil {
-		return task.StatusError, serializer.NewError(serializer.CodeInternalSetting, "Failed to unmarshal task state", err)
+	// Restore state from the persisted task. A task built from the database already has
+	// it; this covers the freshly created one.
+	if m.state == nil {
+		state := &RelocateTaskState{}
+		if err := json.Unmarshal([]byte(m.State()), state); err != nil {
+			return task.StatusError, serializer.NewError(serializer.CodeInternalSetting, "Failed to unmarshal task state", err)
+		}
+		m.state = state
 	}
-	m.state = state
 
 	owner := m.Owner()
 	if owner == nil {
@@ -128,7 +152,7 @@ func (m *RelocateTask) Do(ctx context.Context) (task.Status, error) {
 	fm := manager.NewFileManager(dep, owner)
 	defer fm.Recycle()
 
-	switch state.Phase {
+	switch m.state.Phase {
 	case RelocateTaskPhaseNotStarted, RelocateTaskPhasePreflight:
 		return m.preflight(ctx, fm, owner)
 	case RelocateTaskPhaseTransfer:
@@ -281,6 +305,7 @@ func (m *RelocateTask) Summarize(hasher hashid.Encoder) *queue.Summary {
 		Props: map[string]any{
 			SummaryKeySrcMultiple:    m.state.Uris,
 			SummaryKeySrcDstPolicyID: hashid.EncodePolicyID(hasher, m.state.DstPolicyID),
+			SummaryKeySrcDstPolicy:   m.state.DstPolicyName,
 			SummaryKeyTotal:          m.state.TotalFiles,
 			SummaryKeyFailed:         lo.Ternary(m.state.FailedFile != "", 1, 0),
 		},

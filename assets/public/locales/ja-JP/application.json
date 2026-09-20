@@ -984,7 +984,7 @@
     "extractFileTo": "<0></0>{{more}} を <1></1> に解凍します",
     "createArchiveTo": "<0></0>{{more}} を <1></1> に圧縮します",
     "importFileTo": "{{policy}} のファイルを <1></1> に導入します",
-    "relocatePolicyTo": "<0></0> のストレージポリシーを {{policy}} へ移行",
+    "relocatePolicyTo": "<0></0>{{more}} のストレージポリシーを {{policy}} へ移行",
     "transferringRelocateDes": "データを新しいストレージポリシーへ移動します。",
     "relocateFinishing": "ファイルエンティティを新しいストレージポリシーへ向け直します。"
   },

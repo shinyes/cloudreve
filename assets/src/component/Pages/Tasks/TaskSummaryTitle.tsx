@@ -28,6 +28,10 @@ const StyledChip = styled(Chip)(() => ({
   height: "20px",
 }));
 
+// How many file badges the title row renders before falling back to an ellipsis. The row
+// itself clips at its edge, so this is an upper bound rather than a fixed layout width.
+const relocateBadgeLimit = 3;
+
 const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryTitleProps) => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
@@ -146,15 +150,33 @@ const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryT
               props?.dst_policy_name ||
               policyOption?.find((p) => p.id == props?.dst_policy_id)?.name ||
               "Unknown",
+            // Only signals extra items when the row cannot show them all.
+            more: (props?.src_multiple?.length ?? 0) > relocateBadgeLimit ? "..." : "",
           }}
           components={[
-            <StyledFileBadge
-              variant={"outlined"}
-              simplifiedFile={{
-                type: (props?.src_multiple?.length ?? 0) > 1 ? FileType.folder : FileType.file,
-                path: props?.src_multiple?.[0] ? props.src_multiple[0] : newMyUri("").toString(),
+            <span
+              key={0}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                verticalAlign: "middle",
+                // Let the badges lay out at their natural width and clip at the row
+                // edge; shrinking them is what produced a single truncated chip before.
+                overflow: "hidden",
+                maxWidth: "100%",
               }}
-            />,
+            >
+              {props?.src_multiple?.slice(0, relocateBadgeLimit).map((src) => (
+                <StyledFileBadge
+                  key={src}
+                  variant={"outlined"}
+                  simplifiedFile={{
+                    type: FileType.file,
+                    path: src,
+                  }}
+                />
+              ))}
+            </span>,
           ]}
         />
       );

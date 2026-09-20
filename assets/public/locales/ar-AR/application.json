@@ -969,7 +969,7 @@
     "extractFileTo": "استخراج <0></0>{{more}} إلى <1></1>",
     "createArchiveTo": "إنشاء ملف أرشيف إلى <1></1> لـ <0></0>{{more}}",
     "importFileTo": "استيراد الملفات من {{policy}} إلى <0></0>",
-    "relocatePolicyTo": "نقل سياسة التخزين الخاصة بـ <0></0> إلى {{policy}}",
+    "relocatePolicyTo": "نقل سياسة التخزين الخاصة بـ <0></0>{{more}} إلى {{policy}}",
     "transferringRelocateDes": "نقل البيانات إلى سياسة التخزين الجديدة.",
     "relocateFinishing": "توجيه كيانات الملفات إلى سياسة التخزين الجديدة."
   },

@@ -1058,7 +1058,7 @@
     "extractFileTo": "<0></0>{{more}}을 <1></1>로 압축 해제",
     "createArchiveTo": "<0></0>{{more}}을 <1></1>로 패키징",
     "importFileTo": "{{policy}}의 파일을 <0></0>로 가져오기",
-    "relocatePolicyTo": "<0></0>의 저장 정책을 {{policy}}(으)로 이동"
+    "relocatePolicyTo": "<0></0>{{more}}의 저장 정책을 {{policy}}(으)로 이동"
   },
   "vas": {
     "points": "포인트",

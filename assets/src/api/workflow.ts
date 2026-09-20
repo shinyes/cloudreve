@@ -38,6 +38,8 @@ export interface TaskSummary {
     dst?: string;
     src_multiple?: string[];
     dst_policy_id?: string;
+    /** Resolved name of the target policy, so a title need not look the id up. */
+    dst_policy_name?: string;
     failed?: number;
     total?: number;
     download?: DownloadTaskStatus;

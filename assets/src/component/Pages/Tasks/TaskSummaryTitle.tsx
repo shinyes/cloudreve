@@ -119,9 +119,10 @@ const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryT
         <Trans
           i18nKey="setting.importFileTo"
           values={{
-            policy: policyOption
-              ? policyOption.find((p) => p.id == props?.dst_policy_id)?.name ?? "Unknown"
-              : "",
+            policy:
+              props?.dst_policy_name ||
+              policyOption?.find((p) => p.id == props?.dst_policy_id)?.name ||
+              "Unknown",
           }}
           components={[
             <StyledFileBadge
@@ -139,9 +140,12 @@ const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryT
         <Trans
           i18nKey="setting.relocatePolicyTo"
           values={{
-            policy: policyOption
-              ? policyOption.find((p) => p.id == props?.dst_policy_id)?.name ?? "Unknown"
-              : "",
+            // The task records the name itself, so this does not depend on the policy
+            // cache being populated; the cache stays as a fallback for older tasks.
+            policy:
+              props?.dst_policy_name ||
+              policyOption?.find((p) => p.id == props?.dst_policy_id)?.name ||
+              "Unknown",
           }}
           components={[
             <StyledFileBadge

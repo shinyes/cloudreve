@@ -9,11 +9,12 @@ package constants
 //
 // 版本历史：
 //   - 4.15.0 引入 group_storage_policies 多对多关联与回填补丁；
-//   - 4.16.0 加入目录首选存储策略与存储策略间迁移（无新增补丁）。
+//   - 4.16.0 加入目录首选存储策略与存储策略间迁移（无新增补丁）；
+//   - 4.17.0 修复迁移到 S3 策略时的崩溃与文件级策略不同步，并完善任务展示。
 //
-// 补丁执行按 Patch.EndVersion 与数据库中已记录的版本比较，因此升级到 4.16.0
-// 不会重跑 4.15.0 的补丁。
-var BackendVersion = "4.16.0"
+// 补丁执行按 Patch.EndVersion 与数据库中已记录的版本比较，因此升级版本号
+// 不会重跑旧补丁。
+var BackendVersion = "4.17.0"
 
 // IsPro 是否为Pro版本
 var IsPro = "false"

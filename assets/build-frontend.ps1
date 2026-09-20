@@ -24,7 +24,7 @@ param(
   # Value written into build/version.json. The backend validates it against
   # constants.BackendVersion at startup (application/statics/statics.go); keeping them
   # equal avoids the "Static resource version mismatch" error log.
-  [string]$BackendVersion = "4.16.0",
+  [string]$BackendVersion = "4.17.0",
   [switch]$SkipInstall
 )
 

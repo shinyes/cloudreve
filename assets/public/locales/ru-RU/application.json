@@ -1058,7 +1058,7 @@
     "extractFileTo": "Извлечь <0></0>{{more}} в <1></1>",
     "createArchiveTo": "Упаковать <0></0>{{more}} в <1></1>",
     "importFileTo": "Импортировать файлы из {{policy}} в <0></0>",
-    "relocatePolicyTo": "Переместить политику хранения <0></0> в {{policy}}"
+    "relocatePolicyTo": "Переместить политику хранения <0></0>{{more}} в {{policy}}"
   },
   "vas": {
     "points": "Очки",

@@ -1054,7 +1054,7 @@
     "extractFileTo": "Estrai <0></0>{{more}} in <1></1>",
     "createArchiveTo": "Crea file di archivio in <1></1> per <0></0>{{more}}",
     "importFileTo": "Importa file da {{policy}} in <0></0>",
-    "relocatePolicyTo": "Sposta la policy di archiviazione di <0></0> su {{policy}}"
+    "relocatePolicyTo": "Sposta la policy di archiviazione di <0></0>{{more}} su {{policy}}"
   },
   "vas": {
     "points": "Punti",

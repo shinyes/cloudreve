@@ -981,7 +981,7 @@
     "extractFileTo": "將 <0></0>{{more}} 解壓縮至 <1></1>",
     "createArchiveTo": "將 <0></0>{{more}} 打包至 <1></1>",
     "importFileTo": "將 {{policy}} 中的文件導入至 <0></0>",
-    "relocatePolicyTo": "將 <0></0> 的儲存策略轉移至 {{policy}}",
+    "relocatePolicyTo": "將 <0></0>{{more}} 的儲存策略轉移至 {{policy}}",
     "transferringRelocateDes": "將資料轉移到新的儲存策略。",
     "relocateFinishing": "更新檔案實體指向新的儲存策略。"
   },

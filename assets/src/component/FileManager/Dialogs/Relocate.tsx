@@ -1,7 +1,7 @@
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getAvailablePolicies, sendRelocate } from "../../../api/api.ts";
+import { getAvailablePolicies, getFileInfo, sendRelocate } from "../../../api/api.ts";
 import { AvailableStoragePolicy } from "../../../api/explorer.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { closeRelocateDialog } from "../../../redux/globalStateSlice.ts";
@@ -27,47 +27,84 @@ const RelocateDialog = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const currentPolicyIDs = useMemo(
-    () => (files ?? []).map((f) => f.extended_info?.storage_policy?.id).filter(Boolean) as string[],
-    [files],
-  );
+  // The policy each selected file currently lives on is not part of a list response:
+  // `extended_info` is only filled in by the single-file detail endpoint. Listing the
+  // current policy as a target would therefore be a no-op offer, so the details are
+  // fetched when the dialog opens. Loading both arrays with one Promise.all keeps the
+  // ids and their names aligned by index.
+  const [currentPolicy, setCurrentPolicy] = useState<{ ids: string[]; name: string }>({ ids: [], name: "" });
 
-  // The policy the selection already lives on is never offered as a target: moving
-  // data onto the policy it is already on does nothing. For a mixed selection only the
-  // policy that ALL of it already lives on is a no-op, and the rest stay available so
-  // the selection can be consolidated onto one of them.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const list = files ?? [];
+    if (list.length === 0) {
+      setCurrentPolicy({ ids: [], name: "" });
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      list.map((f) =>
+        f.path
+          ? dispatch(getFileInfo({ uri: f.path, extended: true }))
+              .then((res) => res.extended_info?.storage_policy ?? null)
+              .catch(() => null)
+          : Promise.resolve(null),
+      ),
+    ).then((infos) => {
+      if (cancelled) {
+        return;
+      }
+
+      const ids = infos.map((info) => info?.id).filter(Boolean) as string[];
+      const counts = new Map<string, number>();
+      infos.forEach((info, index) => {
+        if (info?.id) {
+          counts.set(info.id, (counts.get(info.id) ?? 0) + 1);
+        }
+      });
+
+      // The most common policy describes the selection; a tie keeps the first seen.
+      let bestIndex = -1;
+      let bestCount = 0;
+      infos.forEach((info, index) => {
+        if (!info?.id) {
+          return;
+        }
+        const count = counts.get(info.id) ?? 0;
+        if (count > bestCount) {
+          bestCount = count;
+          bestIndex = index;
+        }
+      });
+
+      setCurrentPolicy({ ids, name: bestIndex >= 0 ? (infos[bestIndex]?.name ?? "") : "" });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, files, dispatch]);
+
+  // The policy the selection already lives on is never offered as a target: moving data
+  // onto the policy it is already on does nothing. For a mixed selection only the policy
+  // that ALL of it already lives on is a no-op, and the rest stay available so the
+  // selection can be consolidated onto one of them.
   const candidates = useMemo(
     () =>
       policies.filter((p) => {
-        if (currentPolicyIDs.length === 0) {
+        if (currentPolicy.ids.length === 0) {
           return true;
         }
-        return !currentPolicyIDs.every((id) => id === p.id);
+        return !currentPolicy.ids.every((id) => id === p.id);
       }),
-    [policies, currentPolicyIDs],
+    [policies, currentPolicy.ids],
   );
 
   const totalSize = useMemo(() => (files ?? []).reduce((sum, f) => sum + (f.size ?? 0), 0), [files]);
-
-  // Reported next to the picker so the current location stays visible without being
-  // selectable. With a mixed selection the most common policy is shown.
-  const currentPolicyName = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const id of currentPolicyIDs) {
-      counts.set(id, (counts.get(id) ?? 0) + 1);
-    }
-
-    let best = "";
-    let bestCount = 0;
-    for (const [id, count] of counts) {
-      if (count > bestCount) {
-        best = id;
-        bestCount = count;
-      }
-    }
-
-    return policies.find((p) => p.id === best)?.name ?? "";
-  }, [currentPolicyIDs, policies]);
 
   useEffect(() => {
     if (!open) {
@@ -129,9 +166,9 @@ const RelocateDialog = () => {
               ))}
             </DenseSelect>
             <Box sx={{ mt: 2 }}>
-              {currentPolicyName && (
+              {currentPolicy.name && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  {t("application:fileManager.relocateCurrentPolicy", { policy: currentPolicyName })}
+                  {t("application:fileManager.relocateCurrentPolicy", { policy: currentPolicy.name })}
                 </Typography>
               )}
               <Typography variant="body2" color="text.secondary">

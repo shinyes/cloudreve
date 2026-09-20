@@ -1,8 +1,10 @@
 import { Box, Chip, styled, Typography } from "@mui/material";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { FileType } from "../../../api/explorer.ts";
+import { getAvailablePolicies } from "../../../api/api.ts";
+import { FileType, StoragePolicy } from "../../../api/explorer.ts";
 import { TaskSummary, TaskType } from "../../../api/workflow.ts";
+import { setPolicyOptionCache } from "../../../redux/globalStateSlice.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { newMyUri } from "../../../util/uri.ts";
 import FileBadge from "../../FileManager/FileBadge.tsx";
@@ -34,6 +36,26 @@ const TaskSummaryTitle = ({ type, summary, isInDashboard = false }: TaskSummaryT
   // runtime even though the declared type says otherwise. Reading through a local
   // that is explicitly normalised keeps the guard in the built bundle.
   const props = summary?.props;
+
+  // Task titles name the target storage policy, and the only source for those names is
+  // this cache. Nothing else fills it - the session bootstrap dispatches it with no
+  // payload - so it is populated on demand here. Without this the policy name in every
+  // task title resolved to "Unknown".
+  useEffect(() => {
+    if (policyOption) {
+      return;
+    }
+
+    dispatch(getAvailablePolicies({}))
+      .then((res) =>
+        dispatch(
+          // The user-facing list carries the fields a task title needs (hash id and
+          // name); the cache type is the explorer's richer policy shape.
+          setPolicyOptionCache((res.policies ?? []) as unknown as StoragePolicy[]),
+        ),
+      )
+      .catch(() => undefined);
+  }, [policyOption, dispatch]);
 
   const selectedCount = useMemo(() => {
     let selected = 0;

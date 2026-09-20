@@ -489,11 +489,9 @@
     "ftsStatus": "Índice de texto completo",
     "ftsIndexed": "Indexado",
     "ftsNotIndexed": "No indexado",
-    "relocateSelectTarget": "Seleccione una política de destino",
     "relocateSummary": "Mover los datos de {{count}} elemento(s) ({{size}}) a la política elegida",
     "relocateHint": "Cada archivo se mueve por completo: si alguno falla, la tarea se detiene y el archivo no cambia.",
-    "relocateNoTarget": "Su grupo no tiene otra política de almacenamiento.",
-    "relocateCurrentPolicy": "Política de almacenamiento actual: {{policy}}"
+    "relocateSamePolicy": "El destino ya es la política de almacenamiento actual; elija otra."
   },
   "modals": {
     "includePasswordInShareLink": "Incluir contraseña en enlace compartido",

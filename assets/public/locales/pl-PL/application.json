@@ -454,11 +454,9 @@
     "ftsStatus": "Indeks pełnotekstowy",
     "ftsIndexed": "Zindeksowane",
     "ftsNotIndexed": "Niezindeksowane",
-    "relocateSelectTarget": "Wybierz politykę docelową",
     "relocateSummary": "Przenieś dane {{count}} elementu(ów) ({{size}}) do wybranej polityki",
     "relocateHint": "Każdy plik jest przenoszony w całości: w razie błędu zadanie zostaje zatrzymane, a plik pozostaje bez zmian.",
-    "relocateNoTarget": "Twoja grupa nie ma innej polityki przechowywania.",
-    "relocateCurrentPolicy": "Bieżąca polityka przechowywania: {{policy}}"
+    "relocateSamePolicy": "Cel jest już bieżącą polityką przechowywania; wybierz inną."
   },
   "modals": {
     "includePasswordInShareLink": "Dołącz hasło do linku udostępniania",

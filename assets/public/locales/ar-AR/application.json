@@ -449,10 +449,7 @@
     "noEncryption": "غير مشفر",
     "ftsStatus": "فهرس النص الكامل",
     "ftsIndexed": "مفهرس",
-    "ftsNotIndexed": "غير مفهرس",
-    "relocateSummary": "نقل بيانات {{count}} عنصر ({{size}}) إلى السياسة المحددة",
-    "relocateHint": "يتم نقل كل ملف بالكامل: عند فشل أي ملف تتوقف المهمة ويبقى الملف كما هو.",
-    "relocateSamePolicy": "الهدف هو سياسة التخزين الحالية بالفعل؛ اختر سياسة أخرى."
+    "ftsNotIndexed": "غير مفهرس"
   },
   "modals": {
     "includePasswordInShareLink": "اضافة كلمة المرور في رابط المشاركة",

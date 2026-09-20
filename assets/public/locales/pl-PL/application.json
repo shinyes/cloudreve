@@ -453,10 +453,7 @@
     "noEncryption": "Niezaszyfrowane",
     "ftsStatus": "Indeks pełnotekstowy",
     "ftsIndexed": "Zindeksowane",
-    "ftsNotIndexed": "Niezindeksowane",
-    "relocateSummary": "Przenieś dane {{count}} elementu(ów) ({{size}}) do wybranej polityki",
-    "relocateHint": "Każdy plik jest przenoszony w całości: w razie błędu zadanie zostaje zatrzymane, a plik pozostaje bez zmian.",
-    "relocateSamePolicy": "Cel jest już bieżącą polityką przechowywania; wybierz inną."
+    "ftsNotIndexed": "Niezindeksowane"
   },
   "modals": {
     "includePasswordInShareLink": "Dołącz hasło do linku udostępniania",

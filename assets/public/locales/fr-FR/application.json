@@ -488,10 +488,7 @@
     "noEncryption": "Non chiffré",
     "ftsStatus": "Index plein texte",
     "ftsIndexed": "Indexé",
-    "ftsNotIndexed": "Non indexé",
-    "relocateSummary": "Déplacer les données de {{count}} élément(s) ({{size}}) vers la stratégie choisie",
-    "relocateHint": "Chaque fichier est déplacé en entier : en cas d'échec, la tâche s'arrête et le fichier reste à sa place.",
-    "relocateSamePolicy": "La cible est déjà la stratégie de stockage actuelle ; choisissez-en une autre."
+    "ftsNotIndexed": "Non indexé"
   },
   "modals": {
     "includePasswordInShareLink": "Inclure le mot de passe dans le lien de partage",

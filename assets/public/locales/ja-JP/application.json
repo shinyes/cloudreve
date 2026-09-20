@@ -453,10 +453,7 @@
     "noEncryption": "暗号化されていません",
     "ftsStatus": "全文インデックス",
     "ftsIndexed": "インデックス済み",
-    "ftsNotIndexed": "未インデックス",
-    "relocateSummary": "{{count}} 件（{{size}}）のデータを選択したポリシーへ移動します",
-    "relocateHint": "各ファイルはまとめて移動します。失敗した場合は中止され、元の状態が保たれます。",
-    "relocateSamePolicy": "選択中のストレージポリシーと同じです。別のポリシーを選んでください。"
+    "ftsNotIndexed": "未インデックス"
   },
   "modals": {
     "includePasswordInShareLink": "共有リンクにパスワードを含める",

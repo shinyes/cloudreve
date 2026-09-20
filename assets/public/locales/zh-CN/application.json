@@ -453,10 +453,7 @@
     "noEncryption": "未加密",
     "ftsStatus": "全文索引",
     "ftsIndexed": "已索引",
-    "ftsNotIndexed": "未索引",
-    "relocateSummary": "将 {{count}} 个对象（共 {{size}}）的数据转移到所选策略",
-    "relocateHint": "文件将逐个完整迁移：任一文件失败即中止并保持原状，不会出现一半在新策略、一半在旧策略的情况。",
-    "relocateSamePolicy": "目标与当前存储策略相同，请选择其它策略。"
+    "ftsNotIndexed": "未索引"
   },
   "modals": {
     "includePasswordInShareLink": "在链接中包含密码",

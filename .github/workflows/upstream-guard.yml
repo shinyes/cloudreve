@@ -23,14 +23,17 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Fail if any remote points at upstream
+      # A remote that only fetches from upstream is both safe and necessary: the fork
+      # needs the upstream objects to keep a shared git ancestor, so merges stay
+      # three-way instead of conflicting across unrelated histories. What must never
+      # exist is a push target, which is what this checks for.
+      - name: Fail if any remote can push to upstream
         run: |
           set -euo pipefail
 
           upstream="cloudreve/cloudreve"
           fail=0
 
-          # Inspect every configured remote URL, including push-specific overrides.
           while IFS= read -r line; do
             [ -z "$line" ] && continue
             key="${line%% *}"
@@ -43,9 +46,23 @@ jobs:
               *) continue ;;
             esac
 
-            if printf '%s' "$lower_value" | grep -q "$upstream"; then
-              echo "::error::$key points at the upstream repository ($value)."
-              echo "This fork must never push to upstream; see UPSTREAM_POLICY.md."
+            printf '%s' "$lower_value" | grep -q "$upstream" || continue
+
+            # A pushurl that does not resolve to upstream disables pushing entirely,
+            # which is exactly the fetch-only mirror this repository is allowed to have.
+            if [ "${lower_key##*.}" = "pushurl" ]; then
+              echo "::error::$key resolves to upstream ($value); that is a push target."
+              fail=1
+              continue
+            fi
+
+            # No override: the plain url doubles as the push url, so it must be one that
+            # refuses to push.
+            if printf '%s' "$lower_value" | grep -q "no-push"; then
+              echo "$key is a fetch-only mirror ($value)."
+            else
+              echo "::error::$key points at upstream ($value) with no pushurl override, so"
+              echo "git would be able to push there. See UPSTREAM_POLICY.md."
               fail=1
             fi
           done < <(git config --local --list || true)

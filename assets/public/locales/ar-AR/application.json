@@ -450,11 +450,9 @@
     "ftsStatus": "فهرس النص الكامل",
     "ftsIndexed": "مفهرس",
     "ftsNotIndexed": "غير مفهرس",
-    "relocateSelectTarget": "اختر سياسة تخزين هدف",
     "relocateSummary": "نقل بيانات {{count}} عنصر ({{size}}) إلى السياسة المحددة",
     "relocateHint": "يتم نقل كل ملف بالكامل: عند فشل أي ملف تتوقف المهمة ويبقى الملف كما هو.",
-    "relocateNoTarget": "لا توجد سياسة تخزين أخرى لمجموعتك.",
-    "relocateCurrentPolicy": "سياسة التخزين الحالية: {{policy}}"
+    "relocateSamePolicy": "الهدف هو سياسة التخزين الحالية بالفعل؛ اختر سياسة أخرى."
   },
   "modals": {
     "includePasswordInShareLink": "اضافة كلمة المرور في رابط المشاركة",

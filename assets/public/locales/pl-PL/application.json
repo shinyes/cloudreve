@@ -984,7 +984,9 @@
     "extractFileTo": "Rozpakuj <0></0>{{more}} do <1></1>",
     "createArchiveTo": "Utwórz plik archiwum w <1></1> dla <0></0>{{more}}",
     "importFileTo": "Importuj pliki z {{policy}} do <0></0>",
-    "relocatePolicyTo": "Przenieś politykę przechowywania <0></0> do {{policy}}"
+    "relocatePolicyTo": "Przenieś politykę przechowywania <0></0> do {{policy}}",
+    "transferringRelocateDes": "Przenieś dane do nowej polityki przechowywania.",
+    "relocateFinishing": "Przypisz encje plików do nowej polityki przechowywania."
   },
   "vas": {
     "points": "Punkty",

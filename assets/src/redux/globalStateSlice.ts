@@ -266,6 +266,8 @@ export interface GlobalStateSlice {
   uploadRawFiles?: File[];
   uploadRawPromiseId?: string[];
 
+  // Filled on demand from the user-facing policy list; nothing else populates it, so it
+  // stays undefined unless a component asks for it.
   policyOptionCache?: StoragePolicy[];
 
   // Search popup

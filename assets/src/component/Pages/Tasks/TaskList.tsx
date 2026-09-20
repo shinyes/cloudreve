@@ -5,7 +5,7 @@ import { Box, Container, FormControlLabel, FormGroup, Switch, Typography } from 
 import { useTranslation } from "react-i18next";
 import PageHeader from "../PageHeader.tsx";
 import { getTasks } from "../../../api/api.ts";
-import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
+import { useAppDispatch } from "../../../redux/hooks.ts";
 import Nothing from "../../Common/Nothing.tsx";
 import TaskCard from "./TaskCard.tsx";
 import PageContainer from "../PageContainer.tsx";
@@ -16,7 +16,6 @@ const autoRefreshInterval = 20 * 1000;
 const TaskList = () => {
   const { t } = useTranslation();
   const dispatch = useAppDispatch();
-  const policyOption = useAppSelector((state) => state.globalState.policyOptionCache);
   const [nextPageToken, setNextPageToken] = useState<string | undefined>("");
   const [tasks, setTasks] = useState<TaskResponse[]>([]);
   const [loading, setLoading] = useState(false);

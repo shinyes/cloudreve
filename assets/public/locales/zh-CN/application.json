@@ -981,7 +981,9 @@
     "extractFileTo": "将 <0></0>{{more}} 解压缩至 <1></1>",
     "createArchiveTo": "将 <0></0>{{more}} 打包至 <1></1>",
     "importFileTo": "将 {{policy}} 中的文件导入至 <0></0>",
-    "relocatePolicyTo": "将 <0></0> 的存储策略转移至 {{policy}}"
+    "relocatePolicyTo": "将 <0></0> 的存储策略转移至 {{policy}}",
+    "transferringRelocateDes": "将数据转移到新的存储策略。",
+    "relocateFinishing": "更新文件实体指向新的存储策略。"
   },
   "vas": {
     "points": "积分",

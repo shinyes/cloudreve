@@ -981,7 +981,9 @@
     "extractFileTo": "Extract <0></0>{{more}} to <1></1>",
     "createArchiveTo": "Create archive file to <1></1> for <0></0>{{more}}",
     "importFileTo": "Import files from {{policy}} to <0></0>",
-    "relocatePolicyTo": "Relocate the storage policy of <0></0> to {{policy}}"
+    "relocatePolicyTo": "Relocate the storage policy of <0></0> to {{policy}}",
+    "transferringRelocateDes": "Move the data to the new storage policy.",
+    "relocateFinishing": "Point the file entities at the new storage policy."
   },
   "vas": {
     "points": "Points",

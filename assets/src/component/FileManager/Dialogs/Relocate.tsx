@@ -1,11 +1,10 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getAvailablePolicies, getFileInfo, sendRelocate } from "../../../api/api.ts";
 import { AvailableStoragePolicy } from "../../../api/explorer.ts";
 import { useAppDispatch, useAppSelector } from "../../../redux/hooks.ts";
 import { closeRelocateDialog } from "../../../redux/globalStateSlice.ts";
-import { sizeToString } from "../../../util";
 import { DenseSelect } from "../../Common/StyledComponents";
 import { SquareMenuItem } from "../ContextMenu/ContextMenu.tsx";
 
@@ -27,8 +26,6 @@ const RelocateDialog = () => {
   const [target, setTarget] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const totalSize = useMemo(() => (files ?? []).reduce((sum, f) => sum + (f.size ?? 0), 0), [files]);
 
   // Where the selection currently lives. `extended_info` is only filled in by the
   // single-file detail endpoint, not by a listing, so it is fetched when the dialog
@@ -124,7 +121,7 @@ const RelocateDialog = () => {
   }, [dispatch, files, target, isSamePolicy, onClose]);
 
   return (
-    <Dialog open={!!open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={!!open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>{t("application:fileManager.relocation")}</DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 1 }}>
@@ -140,17 +137,6 @@ const RelocateDialog = () => {
               </SquareMenuItem>
             ))}
           </DenseSelect>
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            {t("application:fileManager.relocateSummary", {
-              count: files?.length ?? 0,
-              size: sizeToString(totalSize),
-            })}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {isSamePolicy ? t("application:fileManager.relocateSamePolicy") : t("application:fileManager.relocateHint")}
-          </Typography>
         </Box>
       </DialogContent>
       <DialogActions>

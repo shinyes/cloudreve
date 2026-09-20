@@ -488,10 +488,7 @@
     "noEncryption": "Non crittografato",
     "ftsStatus": "Indice full-text",
     "ftsIndexed": "Indicizzato",
-    "ftsNotIndexed": "Non indicizzato",
-    "relocateSummary": "Sposta i dati di {{count}} elemento/i ({{size}}) nella policy scelta",
-    "relocateHint": "Ogni file viene spostato per intero: in caso di errore la attività si ferma e il file resta invariato.",
-    "relocateSamePolicy": "La destinazione è già la policy di archiviazione attuale; scegline un'altra."
+    "ftsNotIndexed": "Non indicizzato"
   },
   "modals": {
     "includePasswordInShareLink": "Includi password nel link di condivisione",

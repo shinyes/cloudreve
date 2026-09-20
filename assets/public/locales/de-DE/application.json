@@ -488,10 +488,7 @@
     "noEncryption": "Nicht verschlüsselt",
     "ftsStatus": "Volltextindex",
     "ftsIndexed": "Indexiert",
-    "ftsNotIndexed": "Nicht indexiert",
-    "relocateSummary": "Daten von {{count}} Objekt(en) ({{size}}) auf die gewählte Richtlinie verschieben",
-    "relocateHint": "Jede Datei wird als Ganzes verschoben: Schlägt eine fehl, wird abgebrochen und die Datei bleibt unverändert.",
-    "relocateSamePolicy": "Das Ziel ist bereits die aktuelle Speicherrichtlinie; wählen Sie eine andere."
+    "ftsNotIndexed": "Nicht indexiert"
   },
   "modals": {
     "includePasswordInShareLink": "Passwort in Link einbeziehen",

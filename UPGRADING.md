@@ -97,12 +97,16 @@ go vet ./inventory/ ./pkg/filemanager/...
 ```
 
 For formatting, check the files this fork touched rather than the whole tree, since several
-upstream files are not gofmt-clean by design (`ent/` is generated,
-`pkg/webdav/internal/xml` and `application/migrator/model` are upstream's):
+upstream files are not gofmt-clean by design:
 
 ```powershell
 gofmt -l (git ls-files '*.go' | Select-String -NotMatch '^ent/')
 ```
+
+This currently lists five files, all inherited from upstream: `application/migrator/model/init.go`,
+`pkg/email/template.go`, `pkg/util/logger_test.go`, `pkg/webdav/internal/xml/marshal.go` and
+`pkg/webdav/internal/xml/read.go`. Treat that list as the baseline: anything else appearing
+in it was introduced by the merge, and anything on it that disappears is fine.
 
 `go vet` reports a few pre-existing unkeyed-struct warnings in the drivers; anything new is
 worth a look.

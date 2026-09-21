@@ -157,18 +157,25 @@ local builds use `npm run build`.
 
 ### Relationship with upstream (important)
 
-This fork **never publishes anything upstream**: no pull requests, no branches, no tags.
-See [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md).
+This fork is based on upstream **4.19.1** and **never publishes anything upstream**: no pull
+requests, no branches, no tags. See [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md).
 
-- no remote pointing at upstream exists in this repository;
+- `upstream` is configured as a **fetch-only mirror** (its `pushurl` does not resolve), so
+  the shared git ancestor is available while pushing there is impossible;
 - `.githooks/pre-push` refuses a push to an upstream URL (enable per clone with
   `git config core.hooksPath .githooks`);
-- `.github/workflows/upstream-guard.yml` checks the invariant on every push and PR.
+- `.github/workflows/upstream-guard.yml` checks on every push and PR that no remote can
+  push upstream, **and** that the shared ancestor with upstream still exists.
 
-To reuse upstream code, fetch it without registering a pushable remote:
+**Read [`UPGRADING.md`](UPGRADING.md) before changing code here.** It records the standing
+rules - never re-import upstream sources, never rewrite published history, keep fork
+changes identifiable - and the procedure for merging an upstream release, which is a normal
+three-way merge:
 
 ```bash
-git fetch https://github.com/cloudreve/Cloudreve.git master:upstream-latest
+git fetch upstream master --no-tags
+git switch -c merge/upstream-<version> main
+git merge upstream/master
 ```
 
 ## :rocket: Contributing

@@ -146,16 +146,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests\relocate\run.ps1
 
 ### 与上游的关系（重要）
 
-本 fork **永不向上游发布任何内容**：不提 PR、不推分支、不推标签。详见 [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md)。
+本 fork 基于上游 **4.19.1**，且**永不向上游发布任何内容**：不提 PR、不推分支、不推标签。详见 [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md)。
 
-- 仓库中**不存在**指向上游的 remote；
+- `upstream` 配置为**只读镜像**（`pushurl` 指向无效占位），因此既能共享 git 祖先、又无法推送；
 - `.githooks/pre-push` 会拒绝推送到上游 URL（新 clone 需执行一次 `git config core.hooksPath .githooks` 启用）；
-- `.github/workflows/upstream-guard.yml` 在每次 push/PR 时校验该约束。
+- `.github/workflows/upstream-guard.yml` 在每次 push/PR 时校验两件事：**没有任何 remote 能推送到上游**，且**与上游的共享祖先仍然存在**。
 
-需要上游代码时按下面方式拉取，**不要注册可推送的 remote**：
+**改动代码前请先读 [`UPGRADING.md`](UPGRADING.md)**。其中记录了必须遵守的开发准则（**禁止重新导入上游源码**、禁止重写已发布历史、保持改动可识别），以及合并上游发布的流程——它是普通的三方合并：
 
 ```bash
-git fetch https://github.com/cloudreve/Cloudreve.git master:upstream-latest
+git fetch upstream master --no-tags
+git switch -c merge/upstream-<version> main
+git merge upstream/master
 ```
 
 ## :rocket: 贡献

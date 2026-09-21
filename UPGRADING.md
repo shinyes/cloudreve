@@ -22,6 +22,32 @@ git merge-base --is-ancestor upstream/master main && echo "ancestry ok"
 If that fails, the ancestry was lost (for example by re-importing upstream sources instead
 of merging them) and this procedure no longer applies cleanly.
 
+## Development rules for this fork
+
+These are the standing rules for anyone - human or AI - adding code here. They exist
+because the fork has to stay mergeable with a project that keeps moving.
+
+1. **Never re-import upstream sources.** Upstream code enters this repository only through
+   `git merge upstream/master`. Copying upstream files over the tree and committing them
+   severs the shared ancestor, and the damage is invisible until the next merge attempt.
+   `.github/workflows/upstream-guard.yml` asserts the ancestry on every push for exactly
+   this reason.
+2. **Keep fork changes identifiable.** New behaviour goes in new files where practical, and
+   edits to upstream files stay as small as the change allows. The conflict surface is the
+   list of files we touched, so a smaller surface means cheaper upgrades.
+3. **Do not rewrite published history.** No `rebase`, `filter-branch` or force-push on
+   `main` beyond the one-time reconnection described at the end of this file. Rewriting
+   changes every commit id and invalidates the ancestry the guard checks.
+4. **Never add a pushable upstream remote.** See `UPSTREAM_POLICY.md`.
+5. **Record the baseline when it moves.** After merging an upstream release, update the
+   baseline table above and `UPSTREAM_BASELINE` in the guard workflow, so the next person
+   can tell what this fork is based on without archaeology.
+6. **Re-run the full check after every merge**, not just the Go build: the relocation
+   suites and the frontend build are what catch an upstream change that quietly breaks
+   this fork's features.
+7. **Keep this file current.** If an upgrade needs a step that is not written here, add it
+   in the same commit that discovers it.
+
 ## The upstream remote is fetch-only
 
 ```bash

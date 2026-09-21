@@ -1,11 +1,14 @@
 name: Upstream guard
 
-# This fork must never publish to cloudreve/Cloudreve. The pre-push hook stops a push
-# from a configured clone, but it lives in local git config and cannot be enforced for
-# every clone, so the invariant is also checked here on every push and pull request.
+# Two invariants that keep this fork maintainable:
 #
-# See UPSTREAM_POLICY.md for the full policy and the supported ways to reuse upstream
-# code without registering a push target.
+#   1. No remote may be able to push to cloudreve/Cloudreve. The pre-push hook stops a
+#      push from a configured clone, but it lives in local git config and cannot be
+#      enforced for every clone, so it is checked here too.
+#   2. The repository must keep a shared git ancestor with upstream. Losing it turns every
+#      future upstream merge into a reconciliation of unrelated trees.
+#
+# See UPSTREAM_POLICY.md for the policy and UPGRADING.md for the merge procedure.
 on:
   push:
   pull_request:
@@ -15,13 +18,21 @@ on:
 permissions:
   contents: read
 
+env:
+  # The upstream release this fork descends from. Recorded in UPGRADING.md.
+  UPSTREAM_BASELINE: a8becb9f5b226024c83230bc52857c04966e2c30
+
 jobs:
   no-upstream-target:
     name: Reject upstream push targets
     runs-on: ubuntu-latest
     steps:
+      # Full history is required: the ancestry check below has to walk back to the
+      # baseline commit.
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # A remote that only fetches from upstream is both safe and necessary: the fork
       # needs the upstream objects to keep a shared git ancestor, so merges stay
@@ -72,6 +83,51 @@ jobs:
           fi
 
           echo "No remote points at upstream."
+
+      # The value of this repository depends on being able to merge upstream releases as
+      # ordinary three-way merges. That requires upstream to remain an ancestor; when the
+      # link is lost, the failure is silent and only surfaces months later as an
+      # unmergeable tree, so it is asserted on every push instead.
+      - name: Require a shared ancestor with upstream
+        run: |
+          set -euo pipefail
+
+          head=$(git rev-parse HEAD)
+          echo "checking $head"
+
+          baseline="$UPSTREAM_BASELINE"
+          if [ -n "$baseline" ] && git cat-file -e "${baseline}^{commit}" 2>/dev/null; then
+            if git merge-base --is-ancestor "$baseline" "$head"; then
+              echo "baseline $baseline is an ancestor of $head"
+            else
+              echo "::error::the upstream baseline $baseline is not an ancestor of $head."
+              echo "The history was rewritten or upstream sources were re-imported instead"
+              echo "of merged. Follow 'Merging an upstream release' in UPGRADING.md."
+              exit 1
+            fi
+          fi
+
+          # Reaching the upstream default branch is the stronger statement, and it is what
+          # holds once upstream work has been merged at least once. It cannot be checked
+          # when upstream is unreachable, so that case is reported rather than failed.
+          git remote add upstream https://github.com/cloudreve/Cloudreve.git 2>/dev/null || true
+          if git fetch --no-tags --quiet --depth 1 upstream master 2>/dev/null; then
+            upstream_head=$(git rev-parse FETCH_HEAD)
+            if git merge-base --is-ancestor "$upstream_head" "$head"; then
+              echo "upstream/master ($upstream_head) is an ancestor of $head"
+            else
+              base=$(git merge-base "$upstream_head" "$head" 2>/dev/null || true)
+              if [ -z "$base" ]; then
+                echo "::error::no merge base with upstream/master: the shared ancestor is gone."
+                echo "See 'Merging an upstream release' in UPGRADING.md before changing history."
+                exit 1
+              fi
+              echo "::notice::upstream has moved on (merge base $base); this is expected"
+              echo "between merges and is resolved by the procedure in UPGRADING.md."
+            fi
+          else
+            echo "::notice::could not reach upstream to compare; the baseline check above still applies."
+          fi
 
       - name: Fail if a pull request targets upstream
         if: github.event_name == 'pull_request'

@@ -1,5 +1,12 @@
 # Contributing to Cloudreve
 
+> **This is a fork, not upstream.** Before changing anything, read
+> [`UPGRADING.md`](UPGRADING.md) - it lists the standing development rules (never
+> re-import upstream sources, never rewrite published history, keep changes
+> identifiable) and the procedure for merging an upstream release. The guide below is
+> upstream's own and applies to contributing to `cloudreve/Cloudreve`; this fork never
+> publishes anything there, see [`UPSTREAM_POLICY.md`](UPSTREAM_POLICY.md).
+
 Thank you for your interest in contributing to Cloudreve!
 
 The full contributing guide — including project structure, development environment

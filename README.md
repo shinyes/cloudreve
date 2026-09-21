@@ -139,7 +139,7 @@ be pullable without a login.
 cannot `go build` until the frontend is packed - `//go:embed` fails on the missing file:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion 4.16.0
+powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion 4.17.0
 go build -o cloudreve.exe .
 ```
 

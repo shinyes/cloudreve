@@ -42,9 +42,9 @@ because the fork has to stay mergeable with a project that keeps moving.
 5. **Record the baseline when it moves.** After merging an upstream release, update the
    baseline table above and `UPSTREAM_BASELINE` in the guard workflow, so the next person
    can tell what this fork is based on without archaeology.
-6. **Re-run the full check after every merge**, not just the Go build: the relocation
-   suites and the frontend build are what catch an upstream change that quietly breaks
-   this fork's features.
+6. **Re-run the post-merge checklist after every merge**, not just the Go build. The
+   relocation suites and the frontend build are what catch an upstream change that quietly
+   breaks this fork's features.
 7. **Keep this file current.** If an upgrade needs a step that is not written here, add it
    in the same commit that discovers it.
 
@@ -82,16 +82,94 @@ git switch -c merge/upstream-<version> main
 git merge upstream/master                       # a normal three-way merge
 ```
 
-Resolve conflicts, then run the full check before committing the merge:
+Resolve conflicts, then work through the checklist below before committing the merge.
+
+### Post-merge checklist
+
+Run all of it on the merge commit, not on pieces of it. Each item states what it protects,
+so a failure tells you which of this fork's features the upstream change broke.
+
+**1. It compiles**
 
 ```bash
 go build ./...
+go vet ./inventory/ ./pkg/filemanager/...
+```
+
+For formatting, check the files this fork touched rather than the whole tree, since several
+upstream files are not gofmt-clean by design (`ent/` is generated,
+`pkg/webdav/internal/xml` and `application/migrator/model` are upstream's):
+
+```powershell
+gofmt -l (git ls-files '*.go' | Select-String -NotMatch '^ent/')
+```
+
+`go vet` reports a few pre-existing unkeyed-struct warnings in the drivers; anything new is
+worth a look.
+
+**2. This fork's own tests pass**
+
+```bash
 go test ./inventory/ ./pkg/filemanager/...
+```
+
+These cover the things upstream has no tests for and would not notice breaking: the
+many-to-many group/policy binding, the group backfill patch, the three-state encryption
+metadata contract on relocation, and the encryption matrix of a move.
+
+**3. The relocation workflow still works end to end**
+
+```bash
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\relocate\run.ps1
 ```
 
-Merge into `main` once those pass, then bump the version and tag a release as described in
-the README.
+Expect **21 + 11 + 8** assertions to pass. This is the only check that exercises real
+blobs, real S3-driver code paths and rollback; a green `go build` says nothing about it.
+Rebuild the binary first if the frontend changed.
+
+**4. The database still migrates**
+
+```bash
+# fresh instance: must start and report the new version
+./cloudreve.exe          # then: curl /api/v4/site/ping
+```
+
+A patch whose `EndVersion` is at or below the recorded version is skipped, so a schema
+change merged from upstream that expects a new patch needs one added to
+`inventory/migration.go` with a bumped `BackendVersion`. Start an instance against a copy of
+an **existing** database as well, not just a fresh one: that is what catches a merge that
+changed the schema without a patch.
+
+**5. The embedded frontend still matches the backend**
+
+```bash
+powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion <version>
+go build -o cloudreve.exe .
+```
+
+Then check the log on startup for `Static resource version mismatch`; the server refuses to
+serve a UI whose `version.json` disagrees with `BackendVersion`, and the mismatch is easy to
+create by bumping one of the three places and not the others.
+
+**6. The fork's UI is still there**
+
+Open the file manager and confirm the preference picker and the relocate dialog still render
+and still have their strings. A merge that takes upstream's `assets/` wholesale silently
+removes them, and nothing else in this checklist would notice.
+
+**7. Nothing upstream is missing**
+
+```bash
+git merge-base --is-ancestor upstream/master HEAD && echo "upstream is merged"
+git rev-list --count HEAD..upstream/master      # expect 0 after merging a release
+```
+
+**8. Only then commit, bump and tag**
+
+`BackendVersion` in `application/constants/constants.go`, the `$BackendVersion` default in
+`assets/build-frontend.ps1`, and the git tag must all agree, and the tag must stay above
+upstream's numbering. Update the baseline table at the top of this file and
+`UPSTREAM_BASELINE` in `.github/workflows/upstream-guard.yml` in the same commit.
 
 ### Conflicts to expect
 

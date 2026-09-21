@@ -128,7 +128,7 @@ git push origin 4.17.0
 
 ```powershell
 # 构建前端并打包 assets.zip（会同时盖版本号）
-powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion 4.16.0
+powershell -NoProfile -ExecutionPolicy Bypass -File assets\build-frontend.ps1 -BackendVersion 4.17.0
 go build -o cloudreve.exe .
 ```
 

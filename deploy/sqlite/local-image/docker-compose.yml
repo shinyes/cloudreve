@@ -1,0 +1,47 @@
+# Cloudreve with SQLite and no Redis, running a locally built image.
+#
+# Same deployment as ../docker-compose.yml, differing in two ways:
+#   - the image is one you built yourself rather than one pulled from ghcr.io;
+#   - the data directory is a bind mount next to this file, so it can be inspected and
+#     backed up with ordinary file tools.
+#
+# Loading the image first, from the archive the release publishes or from a local build:
+#
+#   docker load -i cloudreve_4.20.0_linux_amd64.tar.gz     # tags it acloud:4.20.0-amd64
+#   # or
+#   docker build -t acloud:4.20.0-amd64 .
+#
+# Then:
+#
+#   cd deploy/sqlite/local-image
+#   docker compose up -d
+#
+# Open http://localhost:5212 and register; the first account becomes the administrator.
+
+services:
+  cloudreve:
+    # Adjust to whatever tag you built or loaded. The release archive for this fork is
+    # named cloudreve_<version>_linux_<arch>.tar.gz and loads as acloud:<version>-<arch>.
+    image: acloud:4.20.0-amd64
+    restart: unless-stopped
+    ports:
+      # Web UI and API.
+      - "5212:5212"
+      # aria2 RPC, published because the image enables aria2 (CR_ENABLE_ARIA2=1).
+      - "6888:6888"
+      - "6888:6888/udp"
+    environment:
+      # SQLite needs no server; the driver is built into the binary.
+      - CR_CONF_Database.Type=sqlite
+      - CR_CONF_Database.DBFile=/cloudreve/data/cloudreve.db
+      # Redis is intentionally absent. An empty Redis.Server selects the in-memory cache
+      # (application/dependency/dependency.go), which is all a single node needs. Add
+      # CR_CONF_Redis.Server=redis:6379 only if you later run several nodes or want the
+      # queue to survive restarts.
+    volumes:
+      # Relative to this file. The container runs as root and creates the directory on
+      # first start, so no manual mkdir or chown is needed.
+      #
+      # This directory holds the database, uploaded files, thumbnails, the cache file and
+      # the generated conf.ini: it is the entire instance state.
+      - ./cloudreve_data:/cloudreve/data

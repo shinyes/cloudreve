@@ -1,0 +1,57 @@
+# Cloudreve with SQLite and no Redis.
+#
+# Both services the upstream compose file adds are optional here:
+#   - Postgres: the SQLite driver is built in and needs no server.
+#   - Redis: any cache, session or queue state falls back to an in-memory store backed by
+#     a file under the data volume (application/dependency/dependency.go: an empty
+#     Redis.Server selects the memo store), so a single container is enough.
+#
+# Everything lives on one volume, so the whole instance is a single directory to back up:
+#
+#   docker compose up -d
+#   docker compose logs -f cloudreve
+#
+# Then open http://localhost:5212 and register; the first account becomes the administrator.
+
+services:
+  cloudreve:
+    # 4.20.0 is this fork's build of upstream 4.19.1 plus the storage-policy work. Pin the
+    # version rather than tracking latest, so an upgrade is a deliberate act.
+    image: ghcr.io/shinyes/cloudreve:4.20.0
+    container_name: cloudreve
+    restart: unless-stopped
+    ports:
+      # Web UI and API.
+      - "5212:5212"
+      # aria2 RPC, used when CR_ENABLE_ARIA2 is set (the image enables it).
+      - "6888:6888"
+      - "6888:6888/udp"
+    environment:
+      # --- database: SQLite, no server required -------------------------------------
+      - CR_CONF_Database.Type=sqlite
+      # Must stay on the volume. The image's working directory is /cloudreve, so this
+      # resolves to /cloudreve/data/cloudreve.db.
+      - CR_CONF_Database.DBFile=/cloudreve/data/cloudreve.db
+
+      # --- Redis deliberately omitted -----------------------------------------------
+      # Do not set CR_CONF_Redis.Server. Leaving it empty makes the instance use its
+      # in-memory cache. Only set it if you later want to run several nodes or keep the
+      # queue across restarts:
+      # - CR_CONF_Redis.Server=redis:6379
+
+      # --- optional --------------------------------------------------------------
+      # SessionSecret is generated on first start and stored in the database when unset.
+      # Set it if you want the value to be part of your deployment config instead:
+      # - CR_CONF_System.SessionSecret=change-me-to-a-long-random-string
+      #
+      # Run behind a reverse proxy that terminates TLS:
+      # - CR_CONF_System.ProxyHeader=X-Forwarded-For
+      # - CR_CONF_SSL.Enabled=false
+    volumes:
+      # Database, uploaded files, thumbnails, cache and configuration all live here.
+      # A bind mount such as ./data:/cloudreve/data works just as well and is easier to
+      # inspect.
+      - cloudreve_data:/cloudreve/data
+
+volumes:
+  cloudreve_data:

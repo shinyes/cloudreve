@@ -50,3 +50,7 @@ assets/build/
 
 # Scratch backups created while developing.
 .backup-multipolicy/
+
+# Runtime data directory created by the SQLite bind-mount deployment under deploy/.
+# It holds the database, uploads and generated secrets, so it must never be committed.
+deploy/**/cloudreve_data/

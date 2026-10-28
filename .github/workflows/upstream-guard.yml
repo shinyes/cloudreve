@@ -20,7 +20,7 @@ permissions:
 
 env:
   # The upstream release this fork descends from. Recorded in UPGRADING.md.
-  UPSTREAM_BASELINE: a8becb9f5b226024c83230bc52857c04966e2c30
+  UPSTREAM_BASELINE: 9f1e0b8333f5c7304a09e1dcb3f9c170dddd63f3
 
 jobs:
   no-upstream-target:

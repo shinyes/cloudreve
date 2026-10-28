@@ -1,26 +1,31 @@
 # Merging upstream work into this fork
 
-This fork is based on upstream **4.19.1** (`a8becb9f`) and keeps a real git ancestry link to
-it, so upstream changes merge as ordinary three-way merges. This file is the procedure to
-follow, and the record of what makes it possible.
+This fork is based on upstream **`9f1e0b8`** - the commit after **4.19.1** (`a8becb9f`) that
+adds OAuth for the Cloudreve CLI - and keeps a real git ancestry link to it, so upstream
+changes merge as ordinary three-way merges. This file is the procedure to follow, and the
+record of what makes it possible.
 
 ## Baseline
 
 | | |
 |---|---|
 | Upstream repository | `cloudreve/Cloudreve` |
-| Baseline commit | `a8becb9f` (tag `4.19.1`) |
-| Relationship | upstream is an ancestor of `main`; `git merge-base main upstream/master` reports `a8becb9f` |
-| Our changes on top | 26 new files and 49 modified files (backend and CI); the frontend under `assets/` is a larger, separate divergence |
+| Baseline commit | `9f1e0b8` (untagged; upstream `master` after tag `4.19.1`) |
+| Relationship | upstream is an ancestor of `main`; `git merge-base main upstream/master` reports `9f1e0b8` |
+| Our changes on top | 30 new files, 52 modified and 1 deleted (backend and CI); the frontend under `assets/` is a larger, separate divergence |
 
 Check the link is still intact before merging:
 
 ```bash
-git merge-base --is-ancestor upstream/master main && echo "ancestry ok"
+git merge-base --is-ancestor 9f1e0b8 main && echo "ancestry ok"
 ```
 
-If that fails, the ancestry was lost (for example by re-importing upstream sources instead
-of merging them) and this procedure no longer applies cleanly.
+Check the recorded baseline, not `upstream/master`. Upstream is normally *ahead* of this
+fork between merges, so testing `upstream/master` fails in exactly the state that means
+there is upstream work to merge; after a merge the two agree again.
+
+If the check fails, the ancestry was lost (for example by re-importing upstream sources
+instead of merging them) and this procedure no longer applies cleanly.
 
 ## Development rules for this fork
 
@@ -95,6 +100,10 @@ so a failure tells you which of this fork's features the upstream change broke.
 go build ./...
 go vet ./inventory/ ./pkg/filemanager/...
 ```
+
+The build embeds `application/statics/assets.zip`, which is gitignored, so a fresh clone
+fails here with `pattern assets.zip: no matching files found`. Run the frontend build from
+item 5 first when that happens; the file it produces is what makes the binary serve a UI.
 
 For formatting, check the files this fork touched rather than the whole tree, since several
 upstream files are not gofmt-clean by design:
